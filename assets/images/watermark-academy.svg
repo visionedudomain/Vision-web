@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <path id="slogan-curve" d="M 222 694 C 328 848 696 848 802 694" />
+  </defs>
+
+  <g fill="#111111">
+    <text x="512" y="350" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-size="164" font-weight="800" letter-spacing="3">VISION</text>
+    <text x="512" y="414" text-anchor="middle" font-family="Poppins, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="1">EDUCATION ACADEMY</text>
+
+    <circle cx="512" cy="490" r="20" />
+
+    <path d="M 428 480 C 464 494 488 523 501 576 C 505 594 505 622 497 660 C 495 670 507 676 513 668 C 523 656 527 630 527 588 C 527 548 535 514 596 480 C 567 509 549 539 543 574 C 538 605 540 633 548 658 C 551 668 539 676 531 667 C 519 652 512 628 512 598 C 512 628 505 652 493 667 C 485 676 473 668 476 658 C 484 633 486 605 481 574 C 475 539 457 509 428 480 Z" />
+
+    <path d="M 433 621 C 453 618 471 618 485 621 L 458 703 L 400 700 Z" />
+    <path d="M 591 621 C 571 618 553 618 539 621 L 566 703 L 624 700 Z" />
+
+    <path d="M 386 704 C 439 696 476 700 512 723 L 499 676 C 470 664 438 662 402 666 Z" />
+    <path d="M 638 704 C 585 696 548 700 512 723 L 525 676 C 554 664 586 662 622 666 Z" />
+    <path d="M 392 690 C 448 684 480 691 512 713" stroke="#111111" stroke-width="8" stroke-linecap="round" fill="none" />
+    <path d="M 632 690 C 576 684 544 691 512 713" stroke="#111111" stroke-width="8" stroke-linecap="round" fill="none" />
+    <path d="M 499 676 L 512 689 L 525 676" stroke="#111111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+    <text font-family="Poppins, Arial, sans-serif" font-size="36" font-style="italic" font-weight="700">
+      <textPath href="#slogan-curve" startOffset="50%" text-anchor="middle">vision with action can change the future</textPath>
+    </text>
+  </g>
+</svg>

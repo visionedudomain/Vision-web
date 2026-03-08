@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Education Academy | Application</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=18">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="brand">
+        <span class="brand-mark brand-mark-image">
+          <img src="assets/images/new_logo.png?v=5" alt="Vision Education Academy logo">
+        </span>
+        <span data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" data-i18n="nav_home">Home</a>
+        <button type="button" class="btn btn-outline lang-toggle" data-lang-toggle aria-label="Switch language">தமிழ்</button>
+        <a href="apply.html" class="active" data-i18n="nav_apply">Application</a>
+        <a href="admin.html" data-i18n="nav_admin">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="container form-layout">
+      <div>
+        <h1 data-i18n="apply_title">Application Form</h1>
+        <p data-i18n="apply_subtitle">Fill this form to request admission. Admin can view all submitted applications from the Admin panel.</p>
+        <ul class="simple-list">
+          <li data-i18n="apply_point_1">Complete all required details.</li>
+          <li data-i18n="apply_point_2">Use valid mobile number and personal details.</li>
+          <li data-i18n="apply_point_3">Submit once; admin will contact you.</li>
+        </ul>
+      </div>
+
+      <form id="applicationForm" class="form-card application-grid">
+        <label>
+          <span data-i18n="form_candidate_name">Name of the Candidate</span>
+          <input type="text" name="candidateName" required data-i18n-placeholder="placeholder_candidate">
+        </label>
+        <label>
+          <span data-i18n="form_father_name">Father Name</span>
+          <input type="text" name="fatherName" required data-i18n-placeholder="placeholder_father">
+        </label>
+        <label>
+          <span data-i18n="form_mother_name">Mother Name</span>
+          <input type="text" name="motherName" data-i18n-placeholder="placeholder_mother">
+        </label>
+        <label>
+          <span data-i18n="form_dob">Date of Birth</span>
+          <input type="date" name="dob" required>
+        </label>
+
+        <fieldset class="form-fieldset full-width">
+          <legend data-i18n="form_gender">Gender</legend>
+          <div class="radio-row">
+            <label class="inline-control">
+              <input type="radio" name="gender" value="Male" required>
+              <span data-i18n="gender_male">Male</span>
+            </label>
+            <label class="inline-control">
+              <input type="radio" name="gender" value="Female" required>
+              <span data-i18n="gender_female">Female</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <label>
+          <span data-i18n="form_qualification">Educational Qualification</span>
+          <input type="text" name="qualification" required data-i18n-placeholder="placeholder_qualification">
+        </label>
+        <label>
+          <span data-i18n="form_religion">Religion</span>
+          <input type="text" name="religion" data-i18n-placeholder="placeholder_religion">
+        </label>
+        <label>
+          <span data-i18n="form_category">Category</span>
+          <select name="category" required>
+            <option value="" data-i18n="category_select">Select category</option>
+            <option value="General" data-i18n="category_general">General</option>
+            <option value="EWS">EWS</option>
+            <option value="OBC">OBC</option>
+            <option value="MBC">MBC</option>
+            <option value="SC">SC</option>
+            <option value="ST">ST</option>
+            <option value="EBC">EBC</option>
+            <option value="BT">BT</option>
+            <option value="BCM">BCM</option>
+            <option value="PH">PH</option>
+            <option value="MSP">MSP</option>
+            <option value="XSM">XSM</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="form_mobile">Mobile Number</span>
+          <input type="tel" name="mobile" required data-i18n-placeholder="placeholder_mobile">
+        </label>
+
+        <label class="full-width">
+          <span data-i18n="form_address">Address for Communication</span>
+          <textarea name="address" rows="4" required data-i18n-placeholder="placeholder_address"></textarea>
+        </label>
+
+        <button type="submit" class="btn btn-primary full-width" data-i18n="btn_submit_application">Submit Application</button>
+        <p class="form-note full-width" data-i18n="apply_note">This demo stores data in browser local storage.</p>
+        <p id="applyStatus" class="status-text full-width" role="status"></p>
+      </form>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year"></span> <span data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>. <span data-i18n="footer_rights">All rights reserved.</span></p>
+    </div>
+  </footer>
+
+  <script src="assets/js/data.js?v=17"></script>
+  <script src="assets/js/i18n.js?v=17"></script>
+  <script src="assets/js/apply.js?v=17"></script>
+</body>
+</html>

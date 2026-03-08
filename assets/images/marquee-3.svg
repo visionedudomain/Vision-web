@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350">
+  <defs>
+    <linearGradient id="bg3" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#27346d"/>
+      <stop offset="100%" stop-color="#4f2b83"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1350" fill="url(#bg3)"/>
+  <rect x="68" y="68" width="944" height="1214" rx="36" fill="none" stroke="#d4c8ff" stroke-opacity="0.5" stroke-width="8"/>
+  <text x="92" y="206" fill="#f8f9ff" font-size="74" font-family="Poppins, Arial, sans-serif" font-weight="800">DISCUSSION SESSIONS</text>
+  <text x="92" y="292" fill="#d7dfff" font-size="46" font-family="Poppins, Arial, sans-serif">Question Paper Analysis After Every Test</text>
+  <rect x="92" y="360" width="892" height="302" rx="24" fill="#ffffff" fill-opacity="0.1"/>
+  <text x="132" y="460" fill="#f8fbff" font-size="52" font-family="Poppins, Arial, sans-serif" font-weight="700">Total 20 Tests</text>
+  <text x="132" y="534" fill="#d9e5ff" font-size="39" font-family="Poppins, Arial, sans-serif">Paper I and Paper II Combined</text>
+  <text x="132" y="605" fill="#d9e5ff" font-size="39" font-family="Poppins, Arial, sans-serif">Structured weekly improvement plan</text>
+  <rect x="92" y="716" width="892" height="426" rx="26" fill="#ffffff" fill-opacity="0.08"/>
+  <text x="132" y="820" fill="#f8fbff" font-size="52" font-family="Poppins, Arial, sans-serif" font-weight="700">Special Notes for All Subjects</text>
+  <text x="132" y="902" fill="#d9e5ff" font-size="39" font-family="Poppins, Arial, sans-serif">Exam-focused materials in easy format</text>
+  <text x="132" y="976" fill="#d9e5ff" font-size="39" font-family="Poppins, Arial, sans-serif">Mentor support for every student</text>
+  <text x="92" y="1240" fill="#cbd7fa" font-size="36" font-family="Poppins, Arial, sans-serif">Vision Education Academy</text>
+</svg>
+

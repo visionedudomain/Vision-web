@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Education Academy | Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=18">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="brand">
+        <span class="brand-mark brand-mark-image">
+          <img src="assets/images/new_logo.png?v=5" alt="Vision Education Academy logo">
+        </span>
+        <span data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" data-i18n="nav_home">Home</a>
+        <button type="button" class="btn btn-outline lang-toggle" data-lang-toggle aria-label="Switch language">தமிழ்</button>
+        <a href="apply.html" data-i18n="nav_apply">Application</a>
+        <a href="admin.html" class="active" data-i18n="nav_admin">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="container">
+      <h1 data-i18n="admin_title">Admin Dashboard</h1>
+      <p class="form-note"><span data-i18n="admin_demo_password">Demo admin password:</span> <strong>vision123</strong></p>
+
+      <section id="loginSection" class="form-card admin-block">
+        <h2 data-i18n="admin_login_title">Admin Login</h2>
+        <form id="loginForm" class="single-line-form">
+          <input type="password" id="adminPassword" required data-i18n-placeholder="admin_password_placeholder">
+          <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
+        </form>
+        <p id="loginStatus" class="status-text" role="status"></p>
+      </section>
+
+      <section id="dashboardSection" class="hidden">
+        <div class="admin-grid">
+          <section class="form-card admin-block">
+            <h2 data-i18n="admin_update_title">Update Website Information</h2>
+            <form id="siteContentForm">
+              <label><span data-i18n="label_tagline">Tagline</span>
+                <input type="text" name="tagline" required>
+              </label>
+              <label><span data-i18n="label_hero_title">Hero Title</span>
+                <input type="text" name="heroTitle" required>
+              </label>
+              <label><span data-i18n="label_hero_text">Hero Text</span>
+                <textarea name="heroText" rows="3" required></textarea>
+              </label>
+              <label><span data-i18n="label_announcement">Announcement</span>
+                <textarea name="announcement" rows="3" required></textarea>
+              </label>
+              <label><span data-i18n="label_address">Address</span>
+                <input type="text" name="address" required>
+              </label>
+              <label><span data-i18n="label_phone">Phone</span>
+                <input type="text" name="phone" required>
+              </label>
+              <label><span data-i18n="label_email">Email</span>
+                <input type="email" name="email" required>
+              </label>
+              <label><span data-i18n="label_instagram_url">Instagram Profile URL</span>
+                <input type="url" name="instagramProfileUrl" required placeholder="https://www.instagram.com/visioneduacademy/">
+              </label>
+              <label><span data-i18n="label_facebook_url">Facebook Page URL</span>
+                <input type="text" name="facebookProfileUrl" required placeholder="Vision Education Academy or https://www.facebook.com/visioneducacademy">
+              </label>
+              <label><span data-i18n="label_marquee_upload">Upload Marquee Images</span>
+                <input type="file" id="marqueeImageFiles" accept="image/*" multiple>
+              </label>
+              <p class="form-note" data-i18n="admin_marquee_upload_hint">You can upload image files directly here. They will be shown only on the home page marquee.</p>
+              <div id="marqueeAdminList" class="marquee-upload-list"></div>
+              <button type="submit" class="btn btn-primary" data-i18n="btn_save_site">Save Website Information</button>
+              <p id="contentStatus" class="status-text" role="status"></p>
+            </form>
+          </section>
+
+          <section class="form-card admin-block">
+            <h2 data-i18n="admin_news_title">News Management</h2>
+            <form id="newsForm">
+              <label><span data-i18n="label_news_title">News Title</span>
+                <input type="text" name="title" required>
+              </label>
+              <label><span data-i18n="label_news_date">News Date</span>
+                <input type="date" name="date" required>
+              </label>
+              <label><span data-i18n="label_summary">Summary</span>
+                <textarea name="summary" rows="3" required></textarea>
+              </label>
+              <button type="submit" class="btn btn-primary" data-i18n="btn_add_news">Add News</button>
+            </form>
+            <div id="newsAdminList" class="news-list compact"></div>
+          </section>
+
+          <section class="form-card admin-block">
+            <h2 data-i18n="admin_instagram_title">Instagram Posts</h2>
+            <form id="instagramPostForm">
+              <label><span data-i18n="label_instagram_post_url">Instagram Post URL or Embed Code</span>
+                <input type="text" name="postUrl" required placeholder="https://www.instagram.com/p/XXXXXXXXXXX/">
+              </label>
+              <button type="submit" class="btn btn-primary" data-i18n="btn_add_instagram_post">Add Instagram Post</button>
+            </form>
+            <p class="form-note" data-i18n="admin_instagram_hint">Paste an Instagram post URL or full embed code; it will appear on the home page.</p>
+            <div id="instagramAdminList" class="news-list compact"></div>
+          </section>
+
+          <section class="form-card admin-block admin-span">
+            <div class="row-between">
+              <h2 data-i18n="admin_applications_title">Application Submissions</h2>
+              <button id="exportApplications" class="btn btn-outline" type="button" data-i18n="btn_export_csv">Export CSV</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-i18n="th_candidate">Candidate</th>
+                    <th data-i18n="th_father">Father</th>
+                    <th data-i18n="th_mobile">Mobile</th>
+                    <th data-i18n="th_dob">DOB</th>
+                    <th data-i18n="th_category">Category</th>
+                    <th data-i18n="th_submitted">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody id="applicationsTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="section-end">
+          <button id="logoutButton" class="btn btn-outline" type="button" data-i18n="btn_logout">Logout</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year"></span> <span data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>. <span data-i18n="footer_rights">All rights reserved.</span></p>
+    </div>
+  </footer>
+
+  <script src="assets/js/data.js?v=17"></script>
+  <script src="assets/js/i18n.js?v=17"></script>
+  <script src="assets/js/admin.js?v=17"></script>
+</body>
+</html>

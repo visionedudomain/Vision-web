@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2855"/>
+      <stop offset="100%" stop-color="#3f236e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1350" fill="url(#bg2)"/>
+  <rect x="70" y="70" width="940" height="1210" rx="34" fill="none" stroke="#c6b7ff" stroke-opacity="0.55" stroke-width="8"/>
+  <text x="90" y="206" fill="#f6f7ff" font-size="74" font-family="Poppins, Arial, sans-serif" font-weight="800">BILINGUAL COACHING</text>
+  <text x="90" y="292" fill="#d5defb" font-size="48" font-family="Poppins, Arial, sans-serif" font-weight="600">Tamil + English Coverage for All Subjects</text>
+  <rect x="90" y="364" width="900" height="206" rx="24" fill="#ffffff" fill-opacity="0.1"/>
+  <text x="130" y="455" fill="#f8fbff" font-size="48" font-family="Poppins, Arial, sans-serif" font-weight="700">Question Papers in Tamil &amp; English</text>
+  <text x="130" y="532" fill="#d9e4ff" font-size="38" font-family="Poppins, Arial, sans-serif">Practice with both language formats</text>
+  <rect x="90" y="626" width="900" height="260" rx="24" fill="#ffffff" fill-opacity="0.09"/>
+  <text x="130" y="718" fill="#f8fbff" font-size="52" font-family="Poppins, Arial, sans-serif" font-weight="700">Online + Offline Model Tests</text>
+  <text x="130" y="792" fill="#d9e4ff" font-size="38" font-family="Poppins, Arial, sans-serif">Attend anywhere and improve consistently</text>
+  <circle cx="184" cy="1034" r="94" fill="#f8b125"/>
+  <rect x="314" y="964" width="676" height="138" rx="20" fill="#f3f7ff" fill-opacity="0.15"/>
+  <text x="346" y="1054" fill="#f9fbff" font-size="50" font-family="Poppins, Arial, sans-serif" font-weight="700">Lowest Fees | Highest Guidance</text>
+  <text x="90" y="1240" fill="#cbd5f5" font-size="36" font-family="Poppins, Arial, sans-serif">Vision Education Academy</text>
+</svg>
+

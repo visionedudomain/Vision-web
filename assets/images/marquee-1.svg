@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e2d63"/>
+      <stop offset="100%" stop-color="#4c2f85"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1350" fill="url(#bg1)"/>
+  <rect x="58" y="58" width="964" height="1234" rx="36" fill="none" stroke="#d6cbff" stroke-opacity="0.55" stroke-width="8"/>
+  <circle cx="176" cy="176" r="58" fill="#f9b233"/>
+  <text x="260" y="188" fill="#f5f6ff" font-size="70" font-family="Poppins, Arial, sans-serif" font-weight="700">VISION ACADEMY</text>
+  <text x="88" y="340" fill="#ffe08a" font-size="90" font-family="Poppins, Arial, sans-serif" font-weight="800">MOCK TEST</text>
+  <text x="88" y="440" fill="#f7f9ff" font-size="76" font-family="Poppins, Arial, sans-serif" font-weight="700">SERIES 2026</text>
+  <rect x="88" y="535" width="904" height="126" rx="22" fill="#f1e8ff" fill-opacity="0.18"/>
+  <text x="120" y="615" fill="#f8fbff" font-size="50" font-family="Poppins, Arial, sans-serif" font-weight="600">Paper I + Paper II Combined</text>
+  <rect x="88" y="728" width="420" height="420" rx="26" fill="#f8f9ff" fill-opacity="0.12"/>
+  <rect x="572" y="728" width="420" height="420" rx="26" fill="#f8f9ff" fill-opacity="0.12"/>
+  <text x="128" y="840" fill="#f8fbff" font-size="48" font-family="Poppins, Arial, sans-serif" font-weight="700">Morning Batch</text>
+  <text x="128" y="920" fill="#dbe4ff" font-size="38" font-family="Poppins, Arial, sans-serif">06:00 AM - 09:00 AM</text>
+  <text x="612" y="840" fill="#f8fbff" font-size="48" font-family="Poppins, Arial, sans-serif" font-weight="700">Evening Batch</text>
+  <text x="612" y="920" fill="#dbe4ff" font-size="38" font-family="Poppins, Arial, sans-serif">05:30 PM - 08:30 PM</text>
+  <text x="88" y="1260" fill="#cdd8ff" font-size="36" font-family="Poppins, Arial, sans-serif">Vision Education Academy</text>
+</svg>
+

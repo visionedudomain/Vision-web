@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Education Academy | Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=18">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="brand">
+        <span class="brand-mark brand-mark-image">
+          <img src="assets/images/new_logo.png?v=5" alt="Vision Education Academy logo">
+        </span>
+        <span id="academyName" data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" class="active" data-i18n="nav_home">Home</a>
+        <button type="button" class="btn btn-outline lang-toggle" data-lang-toggle aria-label="Switch language">தமிழ்</button>
+        <a href="apply.html" data-i18n="nav_apply">Application</a>
+        <a href="admin.html" data-i18n="nav_admin">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="hero-identity">
+            <p class="identity-title" data-i18n="hero_identity_title">VISION EDUCATION ACADEMY</p>
+            <p class="identity-subtitle" data-i18n="hero_identity_subtitle">Centre for All Govt Competitive Exams</p>
+            <p class="identity-location" data-i18n="hero_identity_address">NAVA SANATHI STREET, VILLIANUR - PUDUCHERRY</p>
+            <p class="identity-location" data-i18n="hero_identity_phone">Contact No: 9894382305 / 9994905624</p>
+          </div>
+          <p class="tagline" id="tagline">Coaching for School, Board, and Entrance Success</p>
+          <h1 id="heroTitle">Build your future with guided preparation.</h1>
+          <p id="heroText">Vision Academy helps students with expert faculty, weekly tests, and personal mentoring.</p>
+          <div class="hero-actions">
+            <a href="apply.html" class="btn btn-primary" data-i18n="home_apply_now">Apply Now</a>
+            <a href="#newsHeading" class="btn btn-outline" data-i18n="home_latest_news">Latest News</a>
+          </div>
+        </div>
+        <aside class="hero-media-panel">
+          <div class="hero-card">
+            <h3 data-i18n="home_announcement_title">Current Announcement</h3>
+            <p id="announcement">Admissions open for 2026 batch. Free counseling session every Saturday.</p>
+          </div>
+          <div class="hero-marquee" aria-label="Vision Academy image highlights">
+            <div id="heroMarqueeTrack" class="hero-marquee-track"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section section-alt">
+      <div class="container highlights-block">
+        <h2 id="academyHighlightsTitle">Why Vision Education Academy?</h2>
+        <p id="academyHighlightsSubtitle" class="highlights-subtitle">Key strengths that make our coaching different.</p>
+        <ul id="academyHighlightsList" class="highlights-list"></ul>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="news">
+      <div class="container">
+        <h2 id="newsHeading" class="section-anchor" data-i18n="home_news_updates">News & Updates</h2>
+        <div id="newsList" class="news-list"></div>
+      </div>
+    </section>
+
+    <section class="section" id="instagram">
+      <div class="container">
+        <div class="row-between">
+          <h2 data-i18n="home_instagram_posts">Instagram Posts</h2>
+          <div class="social-actions">
+            <a id="instagramFollowBtn" class="btn btn-outline" href="#" target="_blank" rel="noopener" data-i18n="home_follow_instagram">Follow on Instagram</a>
+            <a id="facebookFollowBtn" class="btn btn-outline" href="#" target="_blank" rel="noopener" data-i18n="home_follow_facebook">Visit Facebook Page</a>
+          </div>
+        </div>
+        <div id="instagramPosts" class="instagram-grid"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container contact-box">
+        <h2 data-i18n="home_contact">Contact</h2>
+        <p><strong data-i18n="home_address">Address:</strong> <a id="addressLink" class="text-link" href="#" target="_blank" rel="noopener"><span id="address"></span></a></p>
+        <p><strong data-i18n="home_phone">Phone:</strong> <span id="phone"></span></p>
+        <p><strong data-i18n="home_email">Email:</strong> <a id="emailLink" class="text-link" href="#"><span id="email"></span></a></p>
+        <p><strong data-i18n="home_instagram">Instagram:</strong> <a id="instagramProfileLink" class="text-link" href="#" target="_blank" rel="noopener">@visioneduacademy</a></p>
+        <p><strong data-i18n="home_facebook">Facebook:</strong> <a id="facebookProfileLink" class="text-link" href="#" target="_blank" rel="noopener">Vision Education Academy</a></p>
+        <div class="map-preview">
+          <iframe id="mapEmbed" class="map-embed" src="" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" title="Vision Academy Location"></iframe>
+          <a id="mapOverlayLink" class="map-overlay-link" href="#" target="_blank" rel="noopener">
+            <span class="sr-only" data-i18n="home_view_map">View on Map</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year"></span> <span id="academyNameFooter">Vision Academy</span>. <span data-i18n="footer_rights">All rights reserved.</span></p>
+    </div>
+  </footer>
+
+  <script src="assets/js/data.js?v=17"></script>
+  <script src="assets/js/i18n.js?v=17"></script>
+  <script src="assets/js/main.js?v=17"></script>
+</body>
+</html>
