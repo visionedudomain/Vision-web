@@ -23,16 +23,16 @@
     mapUrl: "https://maps.app.goo.gl/K3Fg2R2XbR58NR3i9",
     marqueeImages: [
       {
-        name: "marquee-1.svg",
-        src: "assets/images/marquee-1.svg"
+        name: "WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg",
+        src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg"
       },
       {
-        name: "marquee-2.svg",
-        src: "assets/images/marquee-2.svg"
+        name: "WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg",
+        src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg"
       },
       {
-        name: "marquee-3.svg",
-        src: "assets/images/marquee-3.svg"
+        name: "WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg",
+        src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg"
       }
     ],
     instagramPosts: [
@@ -293,16 +293,16 @@
       if (!Array.isArray(savedSiteData.marqueeImages) || !savedSiteData.marqueeImages.length) {
         savedSiteData.marqueeImages = [
           {
-            name: "marquee-1.svg",
-            src: "assets/images/marquee-1.svg"
+            name: "WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg",
+            src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg"
           },
           {
-            name: "marquee-2.svg",
-            src: "assets/images/marquee-2.svg"
+            name: "WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg",
+            src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg"
           },
           {
-            name: "marquee-3.svg",
-            src: "assets/images/marquee-3.svg"
+            name: "WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg",
+            src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg"
           }
         ];
       }
@@ -318,7 +318,7 @@
   }
 
   window.VisionStore = {
-    ADMIN_PASSWORD: "vision123",
+    ADMIN_PASSWORD: "VisionAdmin@123",
     getSiteData: getSiteData,
     saveSiteData: saveSiteData,
     getApplications: getApplications,
