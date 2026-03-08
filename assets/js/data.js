@@ -71,6 +71,32 @@
     ]
   };
 
+  // Load settings from settings.json file
+  var settingsLoaded = false;
+  function loadSettingsFromFile() {
+    if (settingsLoaded) return;
+    settingsLoaded = true;
+    
+    fetch("assets/data/settings.json")
+      .then(function(response) {
+        if (!response.ok) throw new Error("Settings file not found");
+        return response.json();
+      })
+      .then(function(data) {
+        // Update DEFAULT_SITE_DATA from the file
+        Object.assign(DEFAULT_SITE_DATA, data);
+        // Clear localStorage to use file as source of truth
+        localStorage.removeItem(STORAGE_KEYS.siteData);
+      })
+      .catch(function(error) {
+        // Silently fail - use hardcoded defaults
+        console.info("Using default settings (settings.json not loaded)");
+      });
+  }
+
+  // Load settings on initialization
+  loadSettingsFromFile();
+
   function deepCopy(value) {
     return JSON.parse(JSON.stringify(value));
   }

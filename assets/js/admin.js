@@ -582,6 +582,31 @@
       exportButton.addEventListener("click", exportApplicationsCSV);
     }
 
+    // Export Settings Functionality
+    function exportSettingsJSON() {
+      var siteData = VisionStore.getSiteData();
+      var json = JSON.stringify(siteData, null, 2);
+      var blob = new Blob([json], { type: "application/json;charset=utf-8;" });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = "vision-settings-" + VisionStore.todayISO() + ".json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setStatus("dashboardSection", t("status_exported", "Settings exported successfully! Replace the file in assets/data/settings.json and push to GitHub."), false);
+      setTimeout(function() {
+        var statusEl = byId("dashboardSection").querySelector(".status-text");
+        if (statusEl) statusEl.textContent = "";
+      }, 5000);
+    }
+
+    var exportSettingsButton = byId("exportSettings");
+    if (exportSettingsButton) {
+      exportSettingsButton.addEventListener("click", exportSettingsJSON);
+    }
+
     window.addEventListener("vision-language-changed", function () {
       renderMarqueeAdminList();
       renderNewsAdminList();

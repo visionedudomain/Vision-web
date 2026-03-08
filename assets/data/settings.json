@@ -1,0 +1,62 @@
+{
+  "profileVersion": 10,
+  "academyName": "VISION EDUCATION ACADEMY",
+  "tagline": "Coaching for School, Board, and Entrance Success",
+  "heroTitle": "Build your future with guided preparation.",
+  "heroText": "Vision Academy helps students with expert faculty, weekly tests, and personal mentoring.",
+  "announcement": "Admissions open for 2026 batch. Free counseling session every Saturday.",
+  "address": "NAVA SANNATHI STREET, VILLIANUR - PUDUCHERRY",
+  "phone": "9894382305 / 9994905624",
+  "email": "visionedudomain@gmail.com",
+  "instagramProfileUrl": "https://www.instagram.com/visioneduacademy/",
+  "facebookProfileUrl": "https://www.facebook.com/visioneducacademy",
+  "mapUrl": "https://maps.app.goo.gl/K3Fg2R2XbR58NR3i9",
+  "marqueeImages": [
+    {
+      "name": "WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg",
+      "src": "assets/images/WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg"
+    },
+    {
+      "name": "WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg",
+      "src": "assets/images/WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg"
+    },
+    {
+      "name": "WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg",
+      "src": "assets/images/WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg"
+    }
+  ],
+  "instagramPosts": [
+    {
+      "id": "ig_default_001",
+      "url": "https://www.instagram.com/p/DVfjAxWgcoH/"
+    }
+  ],
+  "programs": [
+    {
+      "title": "Foundation Program",
+      "description": "For Class 9 and 10 students with concept-level preparation in Maths and Science."
+    },
+    {
+      "title": "Board Preparation",
+      "description": "Focused support for Class 10 and 12 board exams with regular tests and revision."
+    },
+    {
+      "title": "JEE / NEET Entrance",
+      "description": "Subject-wise coaching with structured practice and performance tracking."
+    }
+  ],
+  "news": [
+    {
+      "id": "news_001",
+      "title": "Admissions Open for 2026 Session",
+      "date": "2026-03-01",
+      "summary": "New classroom and hybrid batches are open for board and entrance preparation."
+    },
+    {
+      "id": "news_002",
+      "title": "Sunday Mock Test Series Started",
+      "date": "2026-02-25",
+      "summary": "Weekly offline and online mock tests are available for enrolled students."
+    }
+  ]
+}
