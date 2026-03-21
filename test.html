@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Education Academy | Online Test Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=20">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="brand">
+        <span class="brand-mark brand-mark-image">
+          <img src="assets/images/new_logo.png?v=5" alt="Vision Education Academy logo">
+        </span>
+        <span data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" data-i18n="nav_home">Home</a>
+        <button type="button" class="btn btn-outline lang-toggle" data-lang-toggle aria-label="Switch language">தமிழ்</button>
+        <a href="apply.html" data-i18n="nav_apply">Application</a>
+        <a href="test.html" class="active" data-i18n="nav_test">Online Test</a>
+        <a href="admin.html" data-i18n="nav_admin">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="container">
+      <div class="row-between portal-topbar">
+        <div>
+          <h1 data-test-i18n="test_portal_title">Online Test Portal</h1>
+          <p data-test-i18n="test_portal_intro">Approved batch students can log in here and take the current online test within the allowed time window.</p>
+        </div>
+        <a href="test-register.html" class="btn btn-outline" data-test-i18n="test_btn_new_registration">New Test Registration</a>
+      </div>
+
+      <section id="studentLoginSection" class="form-card admin-block portal-login-card">
+        <h2 data-test-i18n="test_portal_login_title">Student Test Login</h2>
+        <p class="form-note" data-test-i18n="test_portal_login_hint">Use the login name and password shared by Vision Academy.</p>
+        <form id="studentLoginForm" class="single-line-form portal-login-form">
+          <input type="text" name="loginName" required data-test-i18n-placeholder="test_placeholder_login_name" placeholder="Enter login name">
+          <input type="password" name="password" required data-test-i18n-placeholder="test_placeholder_password" placeholder="Enter password">
+          <button type="submit" class="btn btn-primary" data-test-i18n="test_btn_login">Login</button>
+        </form>
+      </section>
+
+      <section id="studentDashboardSection" class="hidden">
+        <div class="row-between portal-session-header">
+          <div>
+            <p class="mini-label" data-test-i18n="test_portal_welcome">Welcome</p>
+            <h2 id="studentWelcomeName">Student</h2>
+          </div>
+          <button type="button" id="studentLogoutButton" class="btn btn-outline" data-test-i18n="test_btn_logout">Logout</button>
+        </div>
+
+        <section class="form-card portal-summary-card">
+          <div class="row-between">
+            <div>
+              <p class="mini-label" data-test-i18n="test_portal_status_title">Current Test Status</p>
+              <h3 id="testCardTitle">-</h3>
+              <p id="testCardMessage">-</p>
+            </div>
+            <div class="portal-action-stack">
+              <button type="button" id="startTestButton" class="btn btn-primary hidden" data-test-i18n="test_btn_start">Start Test</button>
+              <button type="button" id="resumeTestButton" class="btn btn-primary hidden" data-test-i18n="test_portal_resume">Resume Test</button>
+            </div>
+          </div>
+          <div class="summary-grid portal-summary-grid">
+            <div class="summary-chip"><span data-test-i18n="test_portal_window">Window</span><strong id="testCardWindow">-</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_language">Language</span><strong id="testCardLanguage">-</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_duration">Duration</span><strong id="testCardDuration">-</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_question_count">Questions</span><strong id="testCardQuestions">-</strong></div>
+          </div>
+        </section>
+
+        <section id="testRunnerSection" class="form-card hidden">
+          <div class="row-between">
+            <div>
+              <h2 id="runnerTestTitle">-</h2>
+              <p class="form-note" data-test-i18n="test_portal_test_rules">You can move freely between questions before final submission.</p>
+            </div>
+            <button type="button" id="submitTestButtonTop" class="btn btn-primary" data-test-i18n="test_btn_submit">Submit Test</button>
+          </div>
+          <div class="summary-grid portal-summary-grid">
+            <div class="summary-chip"><span data-test-i18n="test_portal_window">Window</span><strong id="runnerWindowValue">-</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_question_count">Questions</span><strong id="runnerQuestionCount">0</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_answered">Answered</span><strong id="runnerAnsweredCount">0</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_unanswered">Unanswered</span><strong id="runnerUnansweredCount">0</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_time_left">Time Left</span><strong id="runnerTimeLeft">00:00</strong></div>
+          </div>
+          <div class="question-nav-wrap">
+            <h3 data-test-i18n="test_portal_question_nav">Question Navigation</h3>
+            <div id="questionNav" class="question-nav"></div>
+          </div>
+          <div id="testQuestionsList" class="runner-question-list"></div>
+          <div class="section-end">
+            <button type="button" id="submitTestButtonBottom" class="btn btn-primary" data-test-i18n="test_btn_submit">Submit Test</button>
+          </div>
+        </section>
+
+        <section id="testResultSection" class="form-card hidden">
+          <h2 data-test-i18n="test_portal_result_title">Result Summary</h2>
+          <div class="summary-grid portal-summary-grid">
+            <div class="summary-chip"><span data-test-i18n="test_portal_score">Score</span><strong id="resultScoreValue">0 / 0</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_correct">Correct Answers</span><strong id="resultCorrectValue">0</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_attempted">Attempted</span><strong id="resultAttemptedValue">0</strong></div>
+            <div class="summary-chip"><span data-test-i18n="test_portal_submitted_at">Submitted At</span><strong id="resultSubmittedAtValue">-</strong></div>
+          </div>
+        </section>
+      </section>
+
+      <p id="testPortalStatus" class="status-text" role="status"></p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year"></span> <span data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>. <span data-i18n="footer_rights">All rights reserved.</span></p>
+    </div>
+  </footer>
+
+  <script src="assets/js/firebase-config.js?v=20"></script>
+  <script src="assets/js/i18n.js?v=20"></script>
+  <script src="assets/js/test-shared.js?v=20"></script>
+  <script src="assets/js/test-api.js?v=20"></script>
+  <script src="assets/js/test-portal.js?v=20"></script>
+</body>
+</html>

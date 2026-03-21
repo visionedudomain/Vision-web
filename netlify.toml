@@ -1,8 +1,10 @@
 [build]
   publish = "."
 
+[functions]
+  directory = "netlify/functions"
+
 [[headers]]
   for = "/*.html"
   [headers.values]
     Cache-Control = "no-cache"
-

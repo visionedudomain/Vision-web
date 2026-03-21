@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Education Academy | Online Test Registration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=20">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="brand">
+        <span class="brand-mark brand-mark-image">
+          <img src="assets/images/new_logo.png?v=5" alt="Vision Education Academy logo">
+        </span>
+        <span data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html" data-i18n="nav_home">Home</a>
+        <button type="button" class="btn btn-outline lang-toggle" data-lang-toggle aria-label="Switch language">தமிழ்</button>
+        <a href="apply.html" data-i18n="nav_apply">Application</a>
+        <a href="test-register.html" class="active" data-i18n="nav_test">Online Test</a>
+        <a href="admin.html" data-i18n="nav_admin">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="container form-layout">
+      <div>
+        <h1 data-test-i18n="test_registration_title">Online Test Registration</h1>
+        <p data-test-i18n="test_registration_intro">Fill this form to register for the paid online test batch. Approval is completed by the academy after offline payment verification.</p>
+        <ul class="simple-list">
+          <li data-test-i18n="test_registration_rule_payment">Offline payment verification is handled outside the website.</li>
+          <li data-test-i18n="test_registration_rule_credentials">Use the same login name and password later for the student test portal.</li>
+          <li data-test-i18n="test_registration_rule_approval">After approval, you can log in from the online test page.</li>
+        </ul>
+        <div class="hero-actions">
+          <a href="test.html" class="btn btn-outline" data-test-i18n="test_btn_open_student_login">Go To Student Test Login</a>
+        </div>
+      </div>
+
+      <form id="testRegistrationForm" class="form-card application-grid">
+        <label>
+          <span data-test-i18n="test_registration_name">Student Name</span>
+          <input type="text" name="displayName" required data-test-i18n-placeholder="test_registration_name">
+        </label>
+        <label>
+          <span data-test-i18n="test_label_login_name">Student Name / Login Name</span>
+          <input type="text" name="loginName" required data-test-i18n-placeholder="test_placeholder_login_name">
+        </label>
+        <label>
+          <span data-test-i18n="test_label_password">Password</span>
+          <input type="password" name="password" required minlength="6" data-test-i18n-placeholder="test_placeholder_password">
+        </label>
+        <label>
+          <span data-test-i18n="test_registration_mobile">Mobile Number</span>
+          <input type="tel" name="mobile" required data-test-i18n-placeholder="test_placeholder_mobile" placeholder="Enter mobile number">
+        </label>
+        <label>
+          <span data-test-i18n="test_label_language">Language</span>
+          <select name="language" required>
+            <option value="en" data-test-i18n="test_language_english">English</option>
+            <option value="ta" data-test-i18n="test_language_tamil">Tamil</option>
+          </select>
+        </label>
+        <label>
+          <span data-test-i18n="test_registration_batch">Batch</span>
+          <input type="text" name="batchName" data-test-i18n-placeholder="test_placeholder_batch" placeholder="Morning / Evening">
+        </label>
+        <label class="full-width">
+          <span data-test-i18n="test_registration_exam">Exam / Course</span>
+          <input type="text" name="examName" data-test-i18n-placeholder="test_placeholder_exam" placeholder="LDC / UDC / SI / Police Constable">
+        </label>
+        <button type="submit" class="btn btn-primary full-width" data-test-i18n="test_registration_submit">Submit Registration</button>
+        <p id="testRegistrationStatus" class="status-text full-width" role="status"></p>
+      </form>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year"></span> <span data-i18n="academy_name_brand">VISION EDUCATION ACADEMY</span>. <span data-i18n="footer_rights">All rights reserved.</span></p>
+    </div>
+  </footer>
+
+  <script src="assets/js/firebase-config.js?v=20"></script>
+  <script src="assets/js/i18n.js?v=20"></script>
+  <script src="assets/js/test-shared.js?v=20"></script>
+  <script src="assets/js/test-api.js?v=20"></script>
+  <script src="assets/js/test-register.js?v=20"></script>
+</body>
+</html>

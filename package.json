@@ -1,0 +1,12 @@
+{
+  "name": "vision-web",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Vision Education Academy website and online test portal",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
