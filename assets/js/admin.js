@@ -316,7 +316,6 @@
 
   document.addEventListener("DOMContentLoaded", async function () {
     setYear();
-    await VisionStore.ready();
 
     var loginForm = byId("loginForm");
     var logoutButton = byId("logoutButton");
@@ -331,6 +330,7 @@
     var unsubscribeSite = null;
     var unsubscribeNews = null;
     var unsubscribeApplications = null;
+    var storeReadyPromise = VisionStore.ready();
 
     function stopDashboardSubscriptions() {
       if (unsubscribeSite) {
@@ -378,6 +378,7 @@
         event.preventDefault();
         var password = clean(byId("adminPassword").value);
         try {
+          await storeReadyPromise;
           await VisionStore.loginAdmin(password);
           await VisionStore.bootstrapDefaultContent();
           setStatus("loginStatus", t("status_login_success", "Login successful."), false);
@@ -386,6 +387,8 @@
         }
       });
     }
+
+    await storeReadyPromise;
 
     if (logoutButton) {
       logoutButton.addEventListener("click", async function () {
