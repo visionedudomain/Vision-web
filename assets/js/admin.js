@@ -12,6 +12,13 @@
     return document.getElementById(id);
   }
 
+  function getClosestActionButton(target, attributeName) {
+    if (!(target instanceof Element)) {
+      return null;
+    }
+    return target.closest("button[" + attributeName + "]");
+  }
+
   function clean(value) {
     return String(value || "").trim();
   }
@@ -441,14 +448,12 @@
 
     if (marqueeAdminList) {
       marqueeAdminList.addEventListener("click", async function (event) {
-        var target = event.target;
-        if (!(target instanceof HTMLElement)) {
+        var button = getClosestActionButton(event.target, "data-marquee-id");
+        if (!button) {
           return;
         }
-        var id = target.getAttribute("data-marquee-id");
-        if (!id) {
-          return;
-        }
+        event.preventDefault();
+        var id = button.getAttribute("data-marquee-id");
         try {
           await VisionStore.deleteMarqueeImage(id);
           setStatus("contentStatus", t("status_marquee_removed", "Marquee image removed."), false);
@@ -476,26 +481,26 @@
           await VisionStore.addNews({ title: title, date: date, summary: summary });
           newsForm.reset();
           newsForm.elements.date.value = VisionStore.todayISO();
+          setStatus("newsStatus", "News added successfully.", false);
         } catch (error) {
-          window.alert(error && error.message ? error.message : "Unable to add news.");
+          setStatus("newsStatus", error && error.message ? error.message : "Unable to add news.", true);
         }
       });
     }
 
     if (newsAdminList) {
       newsAdminList.addEventListener("click", async function (event) {
-        var target = event.target;
-        if (!(target instanceof HTMLElement)) {
+        var button = getClosestActionButton(event.target, "data-news-id");
+        if (!button) {
           return;
         }
-        var id = target.getAttribute("data-news-id");
-        if (!id) {
-          return;
-        }
+        event.preventDefault();
+        var id = button.getAttribute("data-news-id");
         try {
           await VisionStore.deleteNews(id);
+          setStatus("newsStatus", "News deleted successfully.", false);
         } catch (error) {
-          window.alert(error && error.message ? error.message : "Unable to delete news.");
+          setStatus("newsStatus", error && error.message ? error.message : "Unable to delete news.", true);
         }
       });
     }
@@ -520,14 +525,12 @@
 
     if (instagramAdminList) {
       instagramAdminList.addEventListener("click", async function (event) {
-        var target = event.target;
-        if (!(target instanceof HTMLElement)) {
+        var button = getClosestActionButton(event.target, "data-ig-id");
+        if (!button) {
           return;
         }
-        var id = target.getAttribute("data-ig-id");
-        if (!id) {
-          return;
-        }
+        event.preventDefault();
+        var id = button.getAttribute("data-ig-id");
         try {
           await VisionStore.deleteInstagramPost(id);
         } catch (error) {
