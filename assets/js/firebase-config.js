@@ -6,7 +6,8 @@
     storageBucket: "vision-web-e4fc7.firebasestorage.app",
     messagingSenderId: "149280648043",
     appId: "1:149280648043:web:8c3f8ffb0195148f4dfa2e",
-    backendBaseUrl: "",
+    backendBaseUrl: "https://vision-web.netlify.app",
+
     adminEmail: "visionedudomain@gmail.com"
   };
 })();
