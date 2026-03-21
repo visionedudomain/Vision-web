@@ -66,6 +66,19 @@
     }
   }
 
+  function setLoginPending(isPending) {
+    var loginForm = byId("loginForm");
+    var passwordInput = byId("adminPassword");
+    var submitButton = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
+    if (passwordInput) {
+      passwordInput.disabled = Boolean(isPending);
+    }
+    if (submitButton) {
+      submitButton.disabled = Boolean(isPending);
+      submitButton.textContent = isPending ? "Logging in..." : t("btn_login", "Login");
+    }
+  }
+
   function toggleDashboard(isLoggedIn) {
     var loginSection = byId("loginSection");
     var dashboardSection = byId("dashboardSection");
@@ -350,6 +363,7 @@
     var unsubscribeApplications = null;
     var authReadyPromise = typeof VisionStore.readyForAuth === "function" ? VisionStore.readyForAuth() : Promise.resolve();
     var storeReadyPromise = VisionStore.ready();
+    var isLoggingIn = false;
 
     function stopDashboardSubscriptions() {
       if (unsubscribeSite) {
@@ -396,7 +410,13 @@
     if (loginForm) {
       loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
+        if (isLoggingIn) {
+          return;
+        }
         var password = clean(byId("adminPassword").value);
+        isLoggingIn = true;
+        setLoginPending(true);
+        setStatus("loginStatus", "Checking admin login...", false);
         try {
           await authReadyPromise;
           await VisionStore.loginAdmin(password);
@@ -405,6 +425,9 @@
           setStatus("loginStatus", t("status_login_success", "Login successful."), false);
         } catch (error) {
           setStatus("loginStatus", error && error.message ? error.message : t("status_login_failed", "Incorrect password."), true);
+        } finally {
+          isLoggingIn = false;
+          setLoginPending(false);
         }
       });
     }
