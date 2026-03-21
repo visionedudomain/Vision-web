@@ -213,6 +213,7 @@
 
   function mapQuestion(question, index) {
     var raw = question && typeof question === "object" ? question : {};
+    var correctOptionId = clean(raw.correctOptionId).toLowerCase();
     return {
       id: clean(raw.id) || ("question_" + String(index + 1)),
       prompt: clean(raw.prompt),
@@ -225,7 +226,7 @@
       }).filter(function (option) {
         return option.text;
       }),
-      correctOptionId: clean(raw.correctOptionId) || "a"
+      correctOptionId: /^[a-d]$/.test(correctOptionId) ? correctOptionId : ""
     };
   }
 

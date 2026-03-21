@@ -104,43 +104,297 @@
     return Number.isNaN(date.getTime()) ? "" : date.toISOString();
   }
 
-  function getDefaultQuestion(index) {
+  function replaceTokens(template, values) {
+    return String(template || "").replace(/\{(\w+)\}/g, function (_, key) {
+      return Object.prototype.hasOwnProperty.call(values || {}, key) ? values[key] : "";
+    });
+  }
+
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>"']/g, function (character) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[character] || character;
+    });
+  }
+
+  var pdfJsPromise = null;
+
+  function loadPdfJs() {
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      return Promise.resolve(window.pdfjsLib);
+    }
+
+    if (!pdfJsPromise) {
+      pdfJsPromise = new Promise(function (resolve, reject) {
+        var script = document.createElement("script");
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+        script.async = true;
+        script.onload = function () {
+          if (!window.pdfjsLib) {
+            reject(new Error("PDF reader could not be loaded."));
+            return;
+          }
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          resolve(window.pdfjsLib);
+        };
+        script.onerror = function () {
+          reject(new Error("Unable to load the PDF reader library."));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    return pdfJsPromise;
+  }
+
+  function collectPdfLines(items) {
+    var rows = [];
+
+    (Array.isArray(items) ? items : []).forEach(function (item) {
+      var text = clean(item && item.str);
+      if (!text) {
+        return;
+      }
+      var transform = item.transform || [];
+      var rowY = Math.round(Number(transform[5] || 0));
+      var row = rows.find(function (entry) {
+        return Math.abs(entry.y - rowY) <= 2;
+      });
+      if (!row) {
+        row = { y: rowY, items: [] };
+        rows.push(row);
+      }
+      row.items.push({
+        x: Number(transform[4] || 0),
+        text: text
+      });
+    });
+
+    return rows.sort(function (left, right) {
+      return right.y - left.y;
+    }).map(function (row) {
+      return row.items.sort(function (left, right) {
+        return left.x - right.x;
+      }).map(function (item) {
+        return item.text;
+      }).join(" ").replace(/\s+/g, " ").trim();
+    }).filter(Boolean);
+  }
+
+  async function extractPdfLines(file) {
+    var pdfjsLib = await loadPdfJs();
+    var arrayBuffer = await file.arrayBuffer();
+    var documentTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    var pdf = await documentTask.promise;
+    var lines = [];
+    var pageIndex;
+
+    for (pageIndex = 1; pageIndex <= pdf.numPages; pageIndex += 1) {
+      var page = await pdf.getPage(pageIndex);
+      var textContent = await page.getTextContent();
+      lines = lines.concat(collectPdfLines(textContent.items));
+    }
+
+    return lines;
+  }
+
+  function extractInlineOptions(text) {
+    var options = [];
+    var matcher = /([A-D])[\)\].:-]\s*(.*?)(?=(?:\s+[A-D][\)\].:-]\s)|$)/gi;
+    var match;
+
+    while ((match = matcher.exec(String(text || "")))) {
+      options.push({
+        id: String(match[1]).toLowerCase(),
+        text: clean(match[2])
+      });
+    }
+
+    return options.filter(function (option, index, list) {
+      return option.text && list.findIndex(function (entry) {
+        return entry.id === option.id;
+      }) === index;
+    });
+  }
+
+  function extractAnswerKeyMap(lines) {
+    var answerMap = {};
+    (Array.isArray(lines) ? lines : []).forEach(function (line) {
+      var matcher = /(\d{1,3})\s*[\)\].:-]?\s*(?:answer\s*[:\-]?\s*)?([A-D])(?=\b)/gi;
+      var match;
+      while ((match = matcher.exec(String(line || "")))) {
+        answerMap[String(match[1])] = String(match[2]).toLowerCase();
+      }
+    });
+    return answerMap;
+  }
+
+  function extractQuestionNumberFromQuestion(question, fallbackIndex) {
+    var match = clean(question && question.id).match(/(\d{1,3})$/);
+    return clean(question && question.questionNumber) || (match ? match[1] : String(fallbackIndex + 1));
+  }
+
+  function applyAnswerMapToQuestions(questionList, answerMap) {
+    var matchedCount = 0;
+    var questions = (Array.isArray(questionList) ? questionList : []).map(function (question, index) {
+      var questionNumber = extractQuestionNumberFromQuestion(question, index);
+      var answer = clean(answerMap && answerMap[questionNumber]).toLowerCase();
+      return {
+        id: question.id || ("question_" + String(index + 1)),
+        questionNumber: questionNumber,
+        prompt: question.prompt,
+        options: Array.isArray(question.options) ? question.options.map(function (option) {
+          return {
+            id: option.id,
+            text: option.text
+          };
+        }) : [],
+        correctOptionId: /^[a-d]$/.test(answer) ? answer : clean(question.correctOptionId).toLowerCase()
+      }
+    });
+    questions.forEach(function (question) {
+      if (/^[a-d]$/.test(question.correctOptionId)) {
+        matchedCount += 1;
+      }
+    });
     return {
-      id: "question_" + String(index + 1),
-      prompt: "",
-      options: [
-        { id: "a", text: "" },
-        { id: "b", text: "" },
-        { id: "c", text: "" },
-        { id: "d", text: "" }
-      ],
-      correctOptionId: "a"
+      questions: questions,
+      matchedCount: matchedCount
     };
   }
 
-  function formatQuestionRow(question, index) {
-    return "" +
-      "<article class='question-editor-card'>" +
-        "<div class='row-between question-editor-head'>" +
-          "<h3>" + t("test_template_question") + " " + String(index + 1) + "</h3>" +
-          "<button type='button' class='btn btn-danger btn-small' data-remove-question='" + index + "'>" + t("test_btn_remove_question") + "</button>" +
-        "</div>" +
-        "<label><span>" + t("test_label_question_prompt") + "</span><textarea rows='2' data-question-index='" + index + "' data-question-field='prompt'>" + (question.prompt || "") + "</textarea></label>" +
-        "<div class='question-option-grid'>" +
-          ["a", "b", "c", "d"].map(function (optionId, optionIndex) {
-            var label = t("test_label_option_" + optionId);
-            var option = question.options[optionIndex] || { id: optionId, text: "" };
-            return "<label><span>" + label + "</span><input type='text' data-question-index='" + index + "' data-question-field='option-" + optionId + "' value='" + (option.text || "") + "'></label>";
-          }).join("") +
-        "</div>" +
-        "<label><span>" + t("test_label_correct_option") + "</span>" +
-          "<select data-question-index='" + index + "' data-question-field='correct'>" +
-            ["a", "b", "c", "d"].map(function (optionId) {
-              return "<option value='" + optionId + "' " + (question.correctOptionId === optionId ? "selected" : "") + ">" + optionId.toUpperCase() + "</option>";
-            }).join("") +
-          "</select>" +
-        "</label>" +
-      "</article>";
+  function parseQuestionBlock(blockLines, answerMap, fallbackIndex, requireAnswer) {
+    var firstLine = clean(blockLines && blockLines[0]);
+    var firstMatch = firstLine.match(/^(?:q(?:uestion)?\s*)?(\d{1,3})[\)\].:-]\s*(.*)$/i);
+    if (!firstMatch) {
+      return null;
+    }
+
+    var questionNumber = String(firstMatch[1]);
+    var lines = [];
+    if (clean(firstMatch[2])) {
+      lines.push(clean(firstMatch[2]));
+    }
+    lines = lines.concat((Array.isArray(blockLines) ? blockLines.slice(1) : []).map(clean).filter(Boolean));
+
+    var promptParts = [];
+    var options = [];
+    var currentOption = null;
+    var inlineAnswer = "";
+
+    lines.forEach(function (line) {
+      var sanitizedLine = clean(String(line || "").replace(/(?:answer|ans|correct(?: option)?)\s*[:\-]?\s*([A-D])/ig, function (_, answerLetter) {
+        inlineAnswer = inlineAnswer || String(answerLetter).toLowerCase();
+        return "";
+      }));
+
+      if (!sanitizedLine) {
+        return;
+      }
+
+      var optionMatch = sanitizedLine.match(/^([A-D])[\)\].:-]\s*(.*)$/i);
+      if (optionMatch) {
+        if (currentOption && currentOption.text) {
+          options.push(currentOption);
+        }
+        currentOption = {
+          id: String(optionMatch[1]).toLowerCase(),
+          text: clean(optionMatch[2])
+        };
+        return;
+      }
+
+      if (currentOption) {
+        currentOption.text = clean(currentOption.text + " " + sanitizedLine);
+        return;
+      }
+
+      promptParts.push(sanitizedLine);
+    });
+
+    if (currentOption && currentOption.text) {
+      options.push(currentOption);
+    }
+
+    var prompt = clean(promptParts.join(" "));
+    if (options.length < 2) {
+      var joined = lines.join(" ");
+      var promptMatch = joined.match(/^(.*?)(?=\s+[A-D][\)\].:-]\s+)/i);
+      if (promptMatch && !prompt) {
+        prompt = clean(promptMatch[1]);
+      }
+      options = extractInlineOptions(joined);
+    }
+
+    options = options.filter(function (option, index, list) {
+      return option && option.id && option.text && list.findIndex(function (entry) {
+        return entry.id === option.id;
+      }) === index;
+    });
+
+    var correctOptionId = clean(inlineAnswer || answerMap[questionNumber] || answerMap[String(fallbackIndex + 1)]).toLowerCase();
+    if (!prompt || options.length < 2 || (requireAnswer && !/^[a-d]$/.test(correctOptionId))) {
+      return null;
+    }
+
+    return {
+      id: "question_" + questionNumber,
+      questionNumber: questionNumber,
+      prompt: prompt,
+      options: options,
+      correctOptionId: /^[a-d]$/.test(correctOptionId) ? correctOptionId : ""
+    };
+  }
+
+  function parseQuestionsFromPdfLines(lines) {
+    var normalizedLines = (Array.isArray(lines) ? lines : []).map(function (line) {
+      return clean(String(line || "").replace(/\s+/g, " "));
+    }).filter(Boolean);
+    var answerSectionIndex = normalizedLines.findIndex(function (line) {
+      return /^(?:answer\s*key|answers?)\b/i.test(line);
+    });
+    if (answerSectionIndex < 0) {
+      answerSectionIndex = normalizedLines.findIndex(function (line) {
+        var matches = String(line || "").match(/(\d{1,3})\s*[\)\].:-]?\s*[A-D](?=\b)/ig);
+        return Array.isArray(matches) && matches.length >= 2;
+      });
+    }
+    var answerMap = extractAnswerKeyMap(answerSectionIndex >= 0 ? normalizedLines.slice(answerSectionIndex) : []);
+    var contentLines = answerSectionIndex >= 0 ? normalizedLines.slice(0, answerSectionIndex) : normalizedLines;
+    var blocks = [];
+    var currentBlock = [];
+
+    contentLines.forEach(function (line) {
+      if (/^(?:q(?:uestion)?\s*)?\d{1,3}[\)\].:-]\s+/i.test(line)) {
+        if (currentBlock.length) {
+          blocks.push(currentBlock);
+        }
+        currentBlock = [line];
+      } else if (currentBlock.length) {
+        currentBlock.push(line);
+      }
+    });
+
+    if (currentBlock.length) {
+      blocks.push(currentBlock);
+    }
+
+    return blocks.map(function (block, index) {
+      return parseQuestionBlock(block, answerMap, index, false);
+    }).filter(Boolean);
+  }
+
+  function parseAnswerKeyFromPdfLines(lines) {
+    var normalizedLines = (Array.isArray(lines) ? lines : []).map(function (line) {
+      return clean(String(line || "").replace(/\s+/g, " "));
+    }).filter(Boolean);
+    return extractAnswerKeyMap(normalizedLines);
   }
 
   document.addEventListener("DOMContentLoaded", async function () {
@@ -160,17 +414,26 @@
     var exportResultsButton = byId("exportTestResults");
     var studentApprovalForm = byId("studentApprovalForm");
     var testBuilderForm = byId("testBuilderForm");
-    var addQuestionButton = byId("addQuestionButton");
     var resetBuilderButton = byId("resetTestBuilder");
-    var questionBuilderList = byId("questionBuilderList");
-    var testCsvInput = byId("testCsvInput");
-    var downloadTestCsvTemplate = byId("downloadTestCsvTemplate");
+    var testPdfInput = byId("testPdfInput");
+    var answerKeyPdfInput = byId("answerKeyPdfInput");
+    var testImportSummary = byId("testImportSummary");
 
     var registrations = [];
     var students = [];
     var tests = [];
     var attempts = [];
-    var builderQuestions = [getDefaultQuestion(0)];
+    var builderQuestions = [];
+    var builderSourceName = "";
+    var builderAnswerSourceName = "";
+    var builderMatchedAnswerCount = 0;
+    var builderSourceMode = "empty";
+
+    function countQuestionsWithAnswers(questionList) {
+      return (Array.isArray(questionList) ? questionList : []).filter(function (question) {
+        return /^[a-d]$/.test(clean(question && question.correctOptionId).toLowerCase());
+      }).length;
+    }
 
     function populateRegistrationSelect() {
       var select = studentApprovalForm ? studentApprovalForm.elements.registrationId : null;
@@ -241,11 +504,36 @@
       });
     }
 
-    function renderQuestions() {
-      if (!questionBuilderList) {
+    function renderBuilderSummary() {
+      if (!testImportSummary) {
         return;
       }
-      questionBuilderList.innerHTML = builderQuestions.map(formatQuestionRow).join("");
+      if (!builderQuestions.length) {
+        testImportSummary.innerHTML = "<strong>" + escapeHtml(t("test_builder_pdf_empty")) + "</strong>";
+        return;
+      }
+
+      var questionMessage = builderSourceMode === "draft"
+        ? replaceTokens(t("test_builder_pdf_saved_summary"), {
+            count: builderQuestions.length,
+            name: builderSourceName || (testBuilderForm && clean(testBuilderForm.elements.title.value)) || t("test_builder_title")
+          })
+        : replaceTokens(t("test_builder_pdf_summary"), {
+            count: builderQuestions.length,
+            name: builderSourceName || "question-paper.pdf"
+          });
+
+      var answerMessage = builderMatchedAnswerCount
+        ? replaceTokens(t("test_builder_answer_pdf_summary"), {
+            count: builderMatchedAnswerCount,
+            name: builderAnswerSourceName || builderSourceName || "answer-key.pdf"
+          })
+        : t("test_builder_answer_pdf_missing");
+
+      testImportSummary.innerHTML =
+        "<strong>" + escapeHtml(builderSourceName || (testBuilderForm && clean(testBuilderForm.elements.title.value)) || t("test_builder_title")) + "</strong>" +
+        "<span>" + escapeHtml(questionMessage) + "</span>" +
+        "<span>" + escapeHtml(answerMessage) + "</span>";
     }
 
     function renderTests() {
@@ -320,12 +608,21 @@
       if (testBuilderForm) {
         testBuilderForm.reset();
       }
-      var testIdInput = byId("testBuilderId");
-      if (testIdInput) {
-        testIdInput.value = "";
+      if (byId("testBuilderId")) {
+        byId("testBuilderId").value = "";
       }
-      builderQuestions = [getDefaultQuestion(0)];
-      renderQuestions();
+      if (testPdfInput) {
+        testPdfInput.value = "";
+      }
+      if (answerKeyPdfInput) {
+        answerKeyPdfInput.value = "";
+      }
+      builderQuestions = [];
+      builderSourceName = "";
+      builderAnswerSourceName = "";
+      builderMatchedAnswerCount = 0;
+      builderSourceMode = "empty";
+      renderBuilderSummary();
     }
 
     function loadTestIntoBuilder(testId) {
@@ -342,18 +639,24 @@
       builderQuestions = (test.questions || []).map(function (question, index) {
         return {
           id: question.id || ("question_" + String(index + 1)),
+          questionNumber: extractQuestionNumberFromQuestion(question, index),
           prompt: question.prompt,
-          options: ["a", "b", "c", "d"].map(function (optionId) {
-            var option = (question.options || []).find(function (entry) { return entry.id === optionId; });
+          options: (question.options || []).map(function (option) {
             return {
-              id: optionId,
-              text: option ? option.text : ""
+              id: option.id,
+              text: option.text
             };
           }),
-          correctOptionId: question.correctOptionId || "a"
+          correctOptionId: clean(question.correctOptionId).toLowerCase()
         };
+      }).filter(function (question) {
+        return clean(question.prompt) && Array.isArray(question.options) && question.options.length >= 2;
       });
-      renderQuestions();
+      builderSourceName = test.title || "Saved draft";
+      builderAnswerSourceName = test.title || "Saved draft";
+      builderMatchedAnswerCount = countQuestionsWithAnswers(builderQuestions);
+      builderSourceMode = "draft";
+      renderBuilderSummary();
     }
 
     window.VisionTestStore.subscribeRegistrations(function (items) {
@@ -527,107 +830,88 @@
       });
     }
 
-    if (questionBuilderList) {
-      questionBuilderList.addEventListener("input", function (event) {
-        var input = event.target;
-        if (!input.hasAttribute("data-question-field")) {
-          return;
-        }
-        var index = Number(input.getAttribute("data-question-index"));
-        var field = input.getAttribute("data-question-field");
-        if (!builderQuestions[index]) {
-          return;
-        }
-        if (field === "prompt") {
-          builderQuestions[index].prompt = clean(input.value);
-          return;
-        }
-        if (field === "correct") {
-          builderQuestions[index].correctOptionId = clean(input.value) || "a";
-          return;
-        }
-        var match = field.match(/^option-(a|b|c|d)$/);
-        if (!match) {
-          return;
-        }
-        var optionIndex = ["a", "b", "c", "d"].indexOf(match[1]);
-        builderQuestions[index].options[optionIndex] = {
-          id: match[1],
-          text: clean(input.value)
-        };
-      });
-
-      questionBuilderList.addEventListener("change", function (event) {
-        var input = event.target;
-        if (input.hasAttribute("data-question-field")) {
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-      });
-
-      questionBuilderList.addEventListener("click", function (event) {
-        var button = event.target.closest("button[data-remove-question]");
-        if (!button) {
-          return;
-        }
-        builderQuestions.splice(Number(button.getAttribute("data-remove-question")), 1);
-        if (!builderQuestions.length) {
-          builderQuestions = [getDefaultQuestion(0)];
-        }
-        renderQuestions();
-      });
-    }
-
-    if (addQuestionButton) {
-      addQuestionButton.addEventListener("click", function () {
-        builderQuestions.push(getDefaultQuestion(builderQuestions.length));
-        renderQuestions();
-      });
-    }
-
     if (resetBuilderButton) {
       resetBuilderButton.addEventListener("click", resetBuilder);
     }
 
-    if (downloadTestCsvTemplate) {
-      downloadTestCsvTemplate.addEventListener("click", function () {
-        downloadTextFile("vision-test-template.csv", "question,optionA,optionB,optionC,optionD,correctOption\nSample question,Option A,Option B,Option C,Option D,A", "text/csv;charset=utf-8");
-      });
-    }
-
-    if (testCsvInput) {
-      testCsvInput.addEventListener("change", async function () {
-        var file = testCsvInput.files && testCsvInput.files[0];
+    if (testPdfInput) {
+      testPdfInput.addEventListener("change", async function () {
+        var file = testPdfInput.files && testPdfInput.files[0];
         if (!file) {
           return;
         }
         try {
-          var text = await file.text();
-          var rows = parseCsvRows(text);
-          var startIndex = rows.length && clean(rows[0][0]).toLowerCase() === "question" ? 1 : 0;
-          builderQuestions = rows.slice(startIndex).map(function (row, index) {
+          setStatus("testBuilderStatus", t("test_builder_pdf_loading"), false);
+          var lines = await extractPdfLines(file);
+          builderQuestions = parseQuestionsFromPdfLines(lines).map(function (question, index) {
             return {
-              id: "question_" + String(index + 1),
-              prompt: row[0],
-              options: [
-                { id: "a", text: row[1] || "" },
-                { id: "b", text: row[2] || "" },
-                { id: "c", text: row[3] || "" },
-                { id: "d", text: row[4] || "" }
-              ],
-              correctOptionId: clean(row[5] || "A").toLowerCase()
+              id: question.id || ("question_" + String(index + 1)),
+              questionNumber: extractQuestionNumberFromQuestion(question, index),
+              prompt: question.prompt,
+              options: Array.isArray(question.options) ? question.options.map(function (option) {
+                return {
+                  id: option.id,
+                  text: option.text
+                };
+              }) : [],
+              correctOptionId: ""
             };
-          }).filter(function (question) {
-            return clean(question.prompt);
           });
           if (!builderQuestions.length) {
-            throw new Error("CSV file did not contain valid questions.");
+            throw new Error(t("test_builder_pdf_invalid"));
           }
-          renderQuestions();
-          setStatus("testBuilderStatus", t("test_status_csv_loaded"), false);
+          builderSourceName = clean(file.name) || "question-paper.pdf";
+          builderAnswerSourceName = "";
+          builderMatchedAnswerCount = 0;
+          builderSourceMode = "pdf";
+          renderBuilderSummary();
+          if (testBuilderForm && !clean(testBuilderForm.elements.title.value)) {
+            testBuilderForm.elements.title.value = builderSourceName.replace(/\.[^.]+$/, "");
+          }
+          setStatus("testBuilderStatus", t("test_builder_pdf_ready"), false);
         } catch (error) {
-          setStatus("testBuilderStatus", error && error.message ? error.message : "Unable to import question CSV.", true);
+          builderQuestions = [];
+          builderSourceName = "";
+          builderAnswerSourceName = "";
+          builderMatchedAnswerCount = 0;
+          builderSourceMode = "empty";
+          renderBuilderSummary();
+          setStatus("testBuilderStatus", error && error.message ? error.message : t("test_builder_pdf_invalid"), true);
         } finally {
-          testCsvInput.value = "";
+          testPdfInput.value = "";
+        }
+      });
+    }
+
+    if (answerKeyPdfInput) {
+      answerKeyPdfInput.addEventListener("change", async function () {
+        var file = answerKeyPdfInput.files && answerKeyPdfInput.files[0];
+        if (!file) {
+          return;
+        }
+        try {
+          if (!builderQuestions.length) {
+            throw new Error(t("test_builder_answer_pdf_missing_questions"));
+          }
+          setStatus("testBuilderStatus", t("test_builder_answer_pdf_loading"), false);
+          var lines = await extractPdfLines(file);
+          var answerMap = parseAnswerKeyFromPdfLines(lines);
+          if (!Object.keys(answerMap).length) {
+            throw new Error(t("test_builder_answer_pdf_invalid"));
+          }
+          var applied = applyAnswerMapToQuestions(builderQuestions, answerMap);
+          if (!applied.matchedCount) {
+            throw new Error(t("test_builder_answer_pdf_invalid"));
+          }
+          builderQuestions = applied.questions;
+          builderAnswerSourceName = clean(file.name) || "answer-key.pdf";
+          builderMatchedAnswerCount = applied.matchedCount;
+          renderBuilderSummary();
+          setStatus("testBuilderStatus", t("test_builder_answer_pdf_ready"), false);
+        } catch (error) {
+          setStatus("testBuilderStatus", error && error.message ? error.message : t("test_builder_answer_pdf_invalid"), true);
+        } finally {
+          answerKeyPdfInput.value = "";
         }
       });
     }
@@ -636,6 +920,13 @@
       testBuilderForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         try {
+          if (!builderQuestions.length) {
+            throw new Error(t("test_builder_pdf_empty"));
+          }
+          var answerReadyCount = countQuestionsWithAnswers(builderQuestions);
+          if (!answerReadyCount || answerReadyCount !== builderQuestions.length) {
+            throw new Error(t("test_builder_answer_pdf_required"));
+          }
           await window.VisionTestStore.saveTest({
             id: clean(byId("testBuilderId").value),
             title: clean(testBuilderForm.elements.title.value),
@@ -653,9 +944,9 @@
                     text: clean(option.text)
                   };
                 }).filter(function (option) {
-                  return option.text;
-                }),
-                correctOptionId: clean(question.correctOptionId) || "a"
+                    return option.text;
+                  }),
+                correctOptionId: clean(question.correctOptionId).toLowerCase()
               };
             })
           });
@@ -740,7 +1031,7 @@
       renderStudents();
       renderTests();
       renderAttempts();
-      renderQuestions();
+      renderBuilderSummary();
     });
 
     resetBuilder();

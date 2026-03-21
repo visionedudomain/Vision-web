@@ -847,6 +847,26 @@ textarea:focus {
   margin: 1rem 0;
 }
 
+.test-import-summary {
+  margin: 1rem 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(95, 110, 188, 0.24);
+  border-radius: 14px;
+  background: rgba(228, 235, 248, 0.72);
+  color: var(--text-soft);
+}
+
+.test-import-summary strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--heading);
+}
+
+.test-import-summary span {
+  display: block;
+  margin-top: 0.25rem;
+}
+
 .question-editor-card {
   padding: 1rem;
   border: 1px solid rgba(95, 110, 188, 0.24);

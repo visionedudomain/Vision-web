@@ -282,7 +282,7 @@
     });
 
     document.querySelectorAll("[data-lang-toggle]").forEach(function (button) {
-      button.textContent = normalized === "en" ? "à®¤à®®à®¿à®´à¯" : "English";
+      button.textContent = normalized === "en" ? "\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD" : "English";
     });
 
     window.dispatchEvent(new CustomEvent("vision-language-changed", {

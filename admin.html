@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=19">
+  <link rel="stylesheet" href="assets/css/style.css?v=22">
 </head>
 <body>
   <header class="site-header">
@@ -20,7 +20,7 @@
       </a>
       <nav class="nav-links">
         <a href="index.html" data-i18n="nav_home">Home</a>
-        <button type="button" class="btn btn-outline lang-toggle" data-lang-toggle aria-label="Switch language">தமிழ்</button>
+        <button type="button" class="btn btn-outline lang-toggle" data-lang-toggle aria-label="Switch language">Tamil</button>
         <a href="apply.html" data-i18n="nav_apply">Application</a>
         <a href="test.html" data-i18n="nav_test">Online Test</a>
         <a href="admin.html" class="active" data-i18n="nav_admin">Admin</a>
@@ -223,10 +223,13 @@
                 <p class="form-note" data-test-i18n="test_builder_hint">Create one active MCQ test at a time. Students can start within the time window and finish within their timer.</p>
               </div>
               <div class="row-inline">
-                <button id="downloadTestCsvTemplate" type="button" class="btn btn-outline" data-test-i18n="test_btn_download_csv">Download CSV Template</button>
                 <label class="btn btn-outline file-button">
-                  <span data-test-i18n="test_btn_import_csv">Import CSV</span>
-                  <input id="testCsvInput" type="file" accept=".csv" hidden>
+                  <span data-test-i18n="test_btn_import_question_pdf">Import Question PDF</span>
+                  <input id="testPdfInput" type="file" accept=".pdf,application/pdf" hidden>
+                </label>
+                <label class="btn btn-outline file-button">
+                  <span data-test-i18n="test_btn_import_answer_pdf">Import Answer Key PDF</span>
+                  <input id="answerKeyPdfInput" type="file" accept=".pdf,application/pdf" hidden>
                 </label>
               </div>
             </div>
@@ -252,12 +255,11 @@
                   <input type="number" name="durationMinutes" min="1" value="60" required>
                 </label>
               </div>
-              <p class="form-note" data-test-i18n="test_builder_csv_hint">CSV columns: question, optionA, optionB, optionC, optionD, correctOption(A/B/C/D)</p>
+              <p class="form-note" data-test-i18n="test_builder_pdf_hint">Upload the question paper PDF first, then upload a separate answer-key PDF for scoring.</p>
               <div class="row-inline section-end">
-                <button id="addQuestionButton" type="button" class="btn btn-outline" data-test-i18n="test_btn_add_question">Add Question</button>
                 <button id="resetTestBuilder" type="button" class="btn btn-outline" data-test-i18n="test_btn_clear_form">Clear Form</button>
               </div>
-              <div id="questionBuilderList" class="question-builder-list"></div>
+              <div id="testImportSummary" class="test-import-summary"></div>
               <button type="submit" class="btn btn-primary" data-test-i18n="test_btn_save_draft">Save Draft</button>
               <p id="testBuilderStatus" class="status-text" role="status"></p>
             </form>
@@ -319,13 +321,14 @@
     </div>
   </footer>
 
-  <script src="assets/js/firebase-config.js?v=20"></script>
-  <script src="assets/js/data.js?v=20"></script>
-  <script src="assets/js/i18n.js?v=20"></script>
-  <script src="assets/js/admin.js?v=20"></script>
-  <script src="assets/js/test-shared.js?v=20"></script>
-  <script src="assets/js/test-api.js?v=20"></script>
-  <script src="assets/js/test-store.js?v=20"></script>
-  <script src="assets/js/test-admin.js?v=20"></script>
+  <script src="assets/js/firebase-config.js?v=22"></script>
+  <script src="assets/js/data.js?v=22"></script>
+  <script src="assets/js/i18n.js?v=22"></script>
+  <script src="assets/js/admin.js?v=22"></script>
+  <script src="assets/js/test-shared.js?v=22"></script>
+  <script src="assets/js/test-api.js?v=22"></script>
+  <script src="assets/js/test-store.js?v=22"></script>
+  <script src="assets/js/test-admin.js?v=22"></script>
 </body>
 </html>
+
