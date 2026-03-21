@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=18">
+  <link rel="stylesheet" href="assets/css/style.css?v=19">
 </head>
 <body>
   <header class="site-header">
@@ -71,10 +71,10 @@
               <label><span data-i18n="label_facebook_url">Facebook Page URL</span>
                 <input type="text" name="facebookProfileUrl" required placeholder="Vision Education Academy or https://www.facebook.com/visioneducacademy">
               </label>
-              <label><span data-i18n="label_marquee_upload">Upload Marquee Images</span>
-                <input type="file" id="marqueeImageFiles" accept="image/*" multiple>
+              <label><span data-i18n="label_marquee_upload">Marquee Image Links</span>
+                <textarea id="marqueeImageLinks" name="marqueeImageLinks" rows="4" data-i18n-placeholder="placeholder_marquee_images" placeholder="https://example.com/photo-1.jpg&#10;https://example.com/photo-2.jpg"></textarea>
               </label>
-              <p class="form-note" data-i18n="admin_marquee_upload_hint">You can upload image files directly here. They will be shown only on the home page marquee.</p>
+              <p class="form-note" data-i18n="admin_marquee_upload_hint">Paste one image link per line. These links will be shown only on the home page marquee.</p>
               <div id="marqueeAdminList" class="marquee-upload-list"></div>
               <button type="submit" class="btn btn-primary" data-i18n="btn_save_site">Save Website Information</button>
               <p id="contentStatus" class="status-text" role="status"></p>
@@ -134,7 +134,6 @@
         </div>
 
         <div class="section-end">
-          <button id="exportSettings" class="btn btn-primary" type="button" data-i18n="btn_export_settings">Export Settings as JSON</button>
           <button id="logoutButton" class="btn btn-outline" type="button" data-i18n="btn_logout">Logout</button>
         </div>
       </section>
@@ -147,8 +146,9 @@
     </div>
   </footer>
 
-  <script src="assets/js/data.js?v=18"></script>
-  <script src="assets/js/i18n.js?v=18"></script>
-  <script src="assets/js/admin.js?v=18"></script>
+  <script src="assets/js/firebase-config.js?v=20"></script>
+  <script src="assets/js/data.js?v=20"></script>
+  <script src="assets/js/i18n.js?v=20"></script>
+  <script src="assets/js/admin.js?v=20"></script>
 </body>
 </html>

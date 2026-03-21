@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   function t(key, fallback) {
@@ -12,11 +12,21 @@
     return document.getElementById(id);
   }
 
-  function setYear() {
-    var yearElement = byId("year");
-    if (yearElement) {
-      yearElement.textContent = String(new Date().getFullYear());
-    }
+  function clean(value) {
+    return String(value || "").trim();
+  }
+
+  function parseMarqueeLinks(input) {
+    return String(input || "").split(/\r?\n/).map(function (line) {
+      return clean(line);
+    }).filter(Boolean).map(function (src, index) {
+      var fileName = src.split(/[?#]/)[0].split("/").filter(Boolean).pop();
+      return {
+        id: "marquee_link_" + Date.now() + "_" + String(index + 1),
+        name: clean(fileName) || ("image-link-" + String(index + 1)),
+        src: src
+      };
+    });
   }
 
   function setStatus(id, message, isError) {
@@ -24,76 +34,23 @@
     if (!element) {
       return;
     }
-    element.textContent = message;
+    element.textContent = message || "";
     element.classList.remove("status-success", "status-error");
-    element.classList.add(isError ? "status-error" : "status-success");
-  }
-
-  function clean(value) {
-    return (value || "").toString().trim();
-  }
-
-  function isDataImageSource(value) {
-    return /^data:image\//i.test(String(value || "").trim());
-  }
-
-  function getUploadedMarqueeEntries(items) {
-    return (Array.isArray(items) ? items : []).filter(function (item) {
-      return item && typeof item === "object" && isDataImageSource(item.src);
-    });
-  }
-
-  function readFileAsMarqueeItem(file) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function () {
-        resolve({
-          name: file && file.name ? String(file.name) : ("uploaded-image-" + Date.now()),
-          src: String(reader.result || "")
-        });
-      };
-      reader.onerror = function () {
-        reject(new Error("Failed to read file."));
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function readFilesAsMarqueeItems(fileList) {
-    return Promise.all(Array.prototype.map.call(fileList || [], readFileAsMarqueeItem));
-  }
-
-  function getInstagramEmbedUrl(postUrl) {
-    var text = String(postUrl || "").trim();
-    var match = text.match(/^https?:\/\/(?:www\.)?instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/i);
-    if (!match) {
-      return "";
+    if (message) {
+      element.classList.add(isError ? "status-error" : "status-success");
     }
-    return "https://www.instagram.com/" + match[1].toLowerCase() + "/" + match[2] + "/embed";
   }
 
-  function extractInstagramPostUrl(input) {
-    var text = String(input || "").trim();
-    if (!text) {
-      return "";
+  function setYear() {
+    var yearElement = byId("year");
+    if (yearElement) {
+      yearElement.textContent = String(new Date().getFullYear());
     }
-
-    var match = text.match(/https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv)\/[A-Za-z0-9_-]+\/?/i);
-    if (!match) {
-      return "";
-    }
-
-    var url = match[0].replace(/^http:\/\//i, "https://");
-    if (url.charAt(url.length - 1) !== "/") {
-      url += "/";
-    }
-    return url;
   }
 
   function toggleDashboard(isLoggedIn) {
     var loginSection = byId("loginSection");
     var dashboardSection = byId("dashboardSection");
-
     if (loginSection) {
       loginSection.classList.toggle("hidden", isLoggedIn);
     }
@@ -102,19 +59,31 @@
     }
   }
 
-  function sortByLatest(newsItems) {
-    return newsItems.slice().sort(function (a, b) {
-      return new Date(b.date) - new Date(a.date);
-    });
+  function extractInstagramPostUrl(input) {
+    var text = String(input || "").trim();
+    if (!text) {
+      return "";
+    }
+    var match = text.match(/https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv)\/[A-Za-z0-9_-]+\/?/i);
+    if (!match) {
+      return "";
+    }
+    var url = match[0].replace(/^http:\/\//i, "https://");
+    if (url.charAt(url.length - 1) !== "/") {
+      url += "/";
+    }
+    return url;
   }
 
-  function populateSiteForm() {
+  function getInstagramEmbedUrl(postUrl) {
+    return /^https?:\/\/(?:www\.)?instagram\.com\/(p|reel|tv)\/[A-Za-z0-9_-]+\/?/i.test(String(postUrl || "").trim()) ? postUrl : "";
+  }
+
+  function populateSiteForm(siteData) {
     var form = byId("siteContentForm");
-    if (!form) {
+    if (!form || !siteData) {
       return;
     }
-
-    var siteData = VisionStore.getSiteData();
     form.elements.tagline.value = siteData.tagline || "";
     form.elements.heroTitle.value = siteData.heroTitle || "";
     form.elements.heroText.value = siteData.heroText || "";
@@ -124,19 +93,22 @@
     form.elements.email.value = siteData.email || "";
     form.elements.instagramProfileUrl.value = siteData.instagramProfileUrl || "";
     form.elements.facebookProfileUrl.value = siteData.facebookProfileUrl || "";
-    syncMarqueeInputs();
 
-    renderMarqueeAdminList();
+    var marqueeLinks = byId("marqueeImageLinks");
+    if (marqueeLinks) {
+      marqueeLinks.value = (siteData.marqueeImages || []).map(function (item) {
+        return item.src || "";
+      }).filter(Boolean).join("\n");
+    }
   }
 
-  function renderMarqueeAdminList() {
+  function renderMarqueeAdminList(siteData) {
     var container = byId("marqueeAdminList");
     if (!container) {
       return;
     }
 
-    var siteData = VisionStore.getSiteData();
-    var images = getUploadedMarqueeEntries(siteData.marqueeImages);
+    var images = siteData && Array.isArray(siteData.marqueeImages) ? siteData.marqueeImages : [];
     container.innerHTML = "";
 
     if (!images.length) {
@@ -144,11 +116,7 @@
       return;
     }
 
-    (siteData.marqueeImages || []).forEach(function (item, index) {
-      if (!item || typeof item !== "object" || !isDataImageSource(item.src)) {
-        return;
-      }
-
+    images.forEach(function (item) {
       var row = document.createElement("div");
       row.className = "marquee-upload-item";
 
@@ -156,42 +124,47 @@
       name.className = "marquee-upload-name";
       name.textContent = item.name || t("admin_marquee_uploaded_label", "Uploaded image");
 
+      var sourceLink = document.createElement("a");
+      sourceLink.href = item.src || "#";
+      sourceLink.target = "_blank";
+      sourceLink.rel = "noopener";
+      sourceLink.className = "text-link";
+      sourceLink.textContent = item.src || "";
+
       var removeButton = document.createElement("button");
       removeButton.type = "button";
       removeButton.className = "btn btn-danger";
       removeButton.textContent = t("btn_delete", "Delete");
-      removeButton.setAttribute("data-marquee-index", String(index));
+      removeButton.setAttribute("data-marquee-id", item.id);
 
       row.appendChild(name);
+      row.appendChild(sourceLink);
       row.appendChild(removeButton);
       container.appendChild(row);
     });
   }
 
-  function syncMarqueeInputs() {
-    var uploadInput = byId("marqueeImageFiles");
-    if (uploadInput) {
-      uploadInput.value = "";
-    }
+  function sortByLatest(newsItems) {
+    return (Array.isArray(newsItems) ? newsItems : []).slice().sort(function (a, b) {
+      return String(b.date || "").localeCompare(String(a.date || ""));
+    });
   }
 
-  function renderNewsAdminList() {
+  function renderNewsAdminList(newsItems) {
     var container = byId("newsAdminList");
     if (!container) {
       return;
     }
 
-    var siteData = VisionStore.getSiteData();
-    var newsList = Array.isArray(siteData.news) ? siteData.news : [];
-
     container.innerHTML = "";
+    var list = sortByLatest(newsItems);
 
-    if (newsList.length === 0) {
+    if (!list.length) {
       container.innerHTML = "<p class='empty-text'>" + t("admin_news_empty", "No news added yet.") + "</p>";
       return;
     }
 
-    sortByLatest(newsList).forEach(function (item) {
+    list.forEach(function (item) {
       var article = document.createElement("article");
       article.className = "news-item";
 
@@ -224,49 +197,13 @@
     });
   }
 
-  function renderApplicationsTable() {
-    var body = byId("applicationsTableBody");
-    if (!body) {
-      return;
-    }
-
-    var applications = VisionStore.getApplications();
-    body.innerHTML = "";
-
-    if (!applications.length) {
-      body.innerHTML = "<tr><td colspan='6'>" + t("admin_applications_empty", "No applications submitted yet.") + "</td></tr>";
-      return;
-    }
-
-    applications.forEach(function (app) {
-      var tr = document.createElement("tr");
-      var cells = [
-        app.candidateName || app.studentName || "-",
-        app.fatherName || "-",
-        app.mobile || app.phone || "-",
-        app.dob ? VisionStore.formatDisplayDate(app.dob) : "-",
-        app.category || "-",
-        VisionStore.formatDisplayDate(app.submittedAt)
-      ];
-
-      cells.forEach(function (value) {
-        var td = document.createElement("td");
-        td.textContent = value;
-        tr.appendChild(td);
-      });
-
-      body.appendChild(tr);
-    });
-  }
-
-  function renderInstagramAdminList() {
+  function renderInstagramAdminList(siteData) {
     var container = byId("instagramAdminList");
     if (!container) {
       return;
     }
 
-    var siteData = VisionStore.getSiteData();
-    var postList = Array.isArray(siteData.instagramPosts) ? siteData.instagramPosts : [];
+    var postList = siteData && Array.isArray(siteData.instagramPosts) ? siteData.instagramPosts : [];
     container.innerHTML = "";
 
     if (!postList.length) {
@@ -274,13 +211,7 @@
       return;
     }
 
-    postList.forEach(function (entry, index) {
-      var url = typeof entry === "string" ? entry : entry && entry.url;
-      var id = entry && entry.id ? entry.id : "";
-      if (!url) {
-        return;
-      }
-
+    postList.forEach(function (entry) {
       var article = document.createElement("article");
       article.className = "news-item";
 
@@ -288,37 +219,55 @@
       header.className = "news-item-header";
 
       var link = document.createElement("a");
-      link.href = url;
+      link.href = entry.url;
       link.target = "_blank";
       link.rel = "noopener";
       link.className = "text-link";
-      link.textContent = url;
+      link.textContent = entry.url;
 
       var deleteButton = document.createElement("button");
       deleteButton.type = "button";
       deleteButton.className = "btn btn-danger";
       deleteButton.textContent = t("btn_delete", "Delete");
-      deleteButton.setAttribute("data-ig-id", id);
-      deleteButton.setAttribute("data-ig-index", String(index));
+      deleteButton.setAttribute("data-ig-id", entry.id);
 
       header.appendChild(link);
       header.appendChild(deleteButton);
       article.appendChild(header);
-
       container.appendChild(article);
     });
   }
 
-  function initializeDashboard() {
-    populateSiteForm();
-    renderNewsAdminList();
-    renderInstagramAdminList();
-    renderApplicationsTable();
-
-    var newsDateInput = byId("newsForm") && byId("newsForm").elements.date;
-    if (newsDateInput && !newsDateInput.value) {
-      newsDateInput.value = VisionStore.todayISO();
+  function renderApplicationsTable(applications) {
+    var body = byId("applicationsTableBody");
+    if (!body) {
+      return;
     }
+
+    body.innerHTML = "";
+    var list = Array.isArray(applications) ? applications : [];
+
+    if (!list.length) {
+      body.innerHTML = "<tr><td colspan='6'>" + t("admin_applications_empty", "No applications submitted yet.") + "</td></tr>";
+      return;
+    }
+
+    list.forEach(function (app) {
+      var tr = document.createElement("tr");
+      [
+        app.candidateName || "-",
+        app.fatherName || "-",
+        app.mobile || "-",
+        app.dob ? VisionStore.formatDisplayDate(app.dob) : "-",
+        app.category || "-",
+        VisionStore.formatDisplayDate(app.submittedAt)
+      ].forEach(function (value) {
+        var td = document.createElement("td");
+        td.textContent = value;
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
   }
 
   function exportApplicationsCSV() {
@@ -331,7 +280,7 @@
     var headers = ["CandidateName", "FatherName", "MotherName", "DOB", "Gender", "Qualification", "Religion", "Category", "Mobile", "Address", "Submitted"];
     var rows = applications.map(function (app) {
       return [
-        app.candidateName || app.studentName || "",
+        app.candidateName || "",
         app.fatherName || "",
         app.motherName || "",
         app.dob || "",
@@ -339,25 +288,20 @@
         app.qualification || "",
         app.religion || "",
         app.category || "",
-        app.mobile || app.phone || "",
+        app.mobile || "",
         app.address || "",
-        app.submittedAt || ""
+        VisionStore.formatDisplayDate(app.submittedAt)
       ];
     });
 
     function csvCell(value) {
       var text = String(value || "");
-      if (/[",\n]/.test(text)) {
-        return "\"" + text.replace(/"/g, "\"\"") + "\"";
-      }
-      return text;
+      return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
     }
 
-    var csv = [headers.join(",")]
-      .concat(rows.map(function (row) {
-        return row.map(csvCell).join(",");
-      }))
-      .join("\n");
+    var csv = [headers.join(",")].concat(rows.map(function (row) {
+      return row.map(csvCell).join(",");
+    })).join("\n");
 
     var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     var url = URL.createObjectURL(blob);
@@ -370,8 +314,9 @@
     URL.revokeObjectURL(url);
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  document.addEventListener("DOMContentLoaded", async function () {
     setYear();
+    await VisionStore.ready();
 
     var loginForm = byId("loginForm");
     var logoutButton = byId("logoutButton");
@@ -380,47 +325,83 @@
     var newsAdminList = byId("newsAdminList");
     var instagramForm = byId("instagramPostForm");
     var instagramAdminList = byId("instagramAdminList");
-    var marqueeImageFiles = byId("marqueeImageFiles");
     var marqueeAdminList = byId("marqueeAdminList");
     var exportButton = byId("exportApplications");
 
-    toggleDashboard(VisionStore.getAdminSession());
-    if (VisionStore.getAdminSession()) {
-      initializeDashboard();
+    var unsubscribeSite = null;
+    var unsubscribeNews = null;
+    var unsubscribeApplications = null;
+
+    function stopDashboardSubscriptions() {
+      if (unsubscribeSite) {
+        unsubscribeSite();
+        unsubscribeSite = null;
+      }
+      if (unsubscribeNews) {
+        unsubscribeNews();
+        unsubscribeNews = null;
+      }
+      if (unsubscribeApplications) {
+        unsubscribeApplications();
+        unsubscribeApplications = null;
+      }
     }
 
+    function startDashboardSubscriptions() {
+      stopDashboardSubscriptions();
+      unsubscribeSite = VisionStore.subscribeSiteData(function (siteData) {
+        populateSiteForm(siteData);
+        renderMarqueeAdminList(siteData);
+        renderInstagramAdminList(siteData);
+      });
+      unsubscribeNews = VisionStore.subscribeNews(renderNewsAdminList);
+      unsubscribeApplications = VisionStore.subscribeApplications(renderApplicationsTable);
+    }
+
+    var configStatus = VisionStore.getConfigStatus();
+    if (!configStatus.configured) {
+      setStatus("loginStatus", configStatus.error || "Firebase is not configured yet.", true);
+    }
+
+    VisionStore.subscribeAdminSession(function (user) {
+      var loggedIn = Boolean(user);
+      toggleDashboard(loggedIn);
+      if (loggedIn) {
+        startDashboardSubscriptions();
+      } else {
+        stopDashboardSubscriptions();
+      }
+    });
+
     if (loginForm) {
-      loginForm.addEventListener("submit", function (event) {
+      loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         var password = clean(byId("adminPassword").value);
-
-        if (password !== VisionStore.ADMIN_PASSWORD) {
-          setStatus("loginStatus", t("status_login_failed", "Incorrect password."), true);
-          VisionStore.setAdminSession(false);
-          toggleDashboard(false);
-          return;
+        try {
+          await VisionStore.loginAdmin(password);
+          await VisionStore.bootstrapDefaultContent();
+          setStatus("loginStatus", t("status_login_success", "Login successful."), false);
+        } catch (error) {
+          setStatus("loginStatus", error && error.message ? error.message : t("status_login_failed", "Incorrect password."), true);
         }
-
-        VisionStore.setAdminSession(true);
-        setStatus("loginStatus", t("status_login_success", "Login successful."), false);
-        toggleDashboard(true);
-        initializeDashboard();
       });
     }
 
     if (logoutButton) {
-      logoutButton.addEventListener("click", function () {
-        VisionStore.setAdminSession(false);
-        toggleDashboard(false);
-        setStatus("loginStatus", "");
+      logoutButton.addEventListener("click", async function () {
+        try {
+          await VisionStore.logoutAdmin();
+          setStatus("loginStatus", "", false);
+        } catch (error) {
+          setStatus("loginStatus", error && error.message ? error.message : "Logout failed.", true);
+        }
       });
     }
 
     if (siteContentForm) {
-      siteContentForm.addEventListener("submit", function (event) {
+      siteContentForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         var siteData = VisionStore.getSiteData();
-
         siteData.tagline = clean(siteContentForm.elements.tagline.value);
         siteData.heroTitle = clean(siteContentForm.elements.heroTitle.value);
         siteData.heroText = clean(siteContentForm.elements.heroText.value);
@@ -430,88 +411,62 @@
         siteData.email = clean(siteContentForm.elements.email.value);
         siteData.instagramProfileUrl = clean(siteContentForm.elements.instagramProfileUrl.value);
         siteData.facebookProfileUrl = clean(siteContentForm.elements.facebookProfileUrl.value);
+        siteData.marqueeImages = parseMarqueeLinks(siteContentForm.elements.marqueeImageLinks.value);
 
-        VisionStore.saveSiteData(siteData);
-        renderMarqueeAdminList();
-        setStatus("contentStatus", t("status_content_saved", "Website information updated successfully."), false);
-      });
-    }
-
-    if (marqueeImageFiles) {
-      marqueeImageFiles.addEventListener("change", function () {
-        var files = marqueeImageFiles.files;
-        if (!files || !files.length) {
-          return;
+        try {
+          await VisionStore.saveSiteData(siteData);
+          setStatus("contentStatus", t("status_content_saved", "Website information updated successfully."), false);
+        } catch (error) {
+          setStatus("contentStatus", error && error.message ? error.message : "Unable to save website information.", true);
         }
-
-        readFilesAsMarqueeItems(files)
-          .then(function (items) {
-            var siteData = VisionStore.getSiteData();
-            siteData.marqueeImages = getUploadedMarqueeEntries(siteData.marqueeImages).concat(items);
-            VisionStore.saveSiteData(siteData);
-            syncMarqueeInputs();
-            renderMarqueeAdminList();
-            setStatus("contentStatus", t("status_marquee_upload_saved", "Marquee images uploaded successfully."), false);
-          })
-          .catch(function () {
-            setStatus("contentStatus", t("status_marquee_upload_failed", "Unable to upload marquee images."), true);
-          });
       });
     }
 
     if (marqueeAdminList) {
-      marqueeAdminList.addEventListener("click", function (event) {
+      marqueeAdminList.addEventListener("click", async function (event) {
         var target = event.target;
         if (!(target instanceof HTMLElement)) {
           return;
         }
-
-        var indexText = target.getAttribute("data-marquee-index");
-        if (indexText === null) {
+        var id = target.getAttribute("data-marquee-id");
+        if (!id) {
           return;
         }
-
-        var siteData = VisionStore.getSiteData();
-        var index = Number(indexText);
-        siteData.marqueeImages = (siteData.marqueeImages || []).filter(function (_item, itemIndex) {
-          return itemIndex !== index;
-        });
-        VisionStore.saveSiteData(siteData);
-        renderMarqueeAdminList();
-        setStatus("contentStatus", t("status_marquee_removed", "Marquee image removed."), false);
+        try {
+          await VisionStore.deleteMarqueeImage(id);
+          setStatus("contentStatus", t("status_marquee_removed", "Marquee image removed."), false);
+        } catch (error) {
+          setStatus("contentStatus", error && error.message ? error.message : "Unable to remove marquee image.", true);
+        }
       });
     }
 
     if (newsForm) {
-      newsForm.addEventListener("submit", function (event) {
+      var newsDateInput = newsForm.elements.date;
+      if (newsDateInput && !newsDateInput.value) {
+        newsDateInput.value = VisionStore.todayISO();
+      }
+
+      newsForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         var title = clean(newsForm.elements.title.value);
         var date = clean(newsForm.elements.date.value);
         var summary = clean(newsForm.elements.summary.value);
-
         if (!title || !date || !summary) {
           return;
         }
-
-        var siteData = VisionStore.getSiteData();
-        var item = {
-          id: "news_" + Date.now(),
-          title: title,
-          date: date,
-          summary: summary
-        };
-
-        siteData.news = Array.isArray(siteData.news) ? siteData.news : [];
-        siteData.news.unshift(item);
-        VisionStore.saveSiteData(siteData);
-        newsForm.reset();
-        newsForm.elements.date.value = VisionStore.todayISO();
-        renderNewsAdminList();
+        try {
+          await VisionStore.addNews({ title: title, date: date, summary: summary });
+          newsForm.reset();
+          newsForm.elements.date.value = VisionStore.todayISO();
+        } catch (error) {
+          window.alert(error && error.message ? error.message : "Unable to add news.");
+        }
       });
     }
 
     if (newsAdminList) {
-      newsAdminList.addEventListener("click", function (event) {
+      newsAdminList.addEventListener("click", async function (event) {
         var target = event.target;
         if (!(target instanceof HTMLElement)) {
           return;
@@ -520,19 +475,16 @@
         if (!id) {
           return;
         }
-
-        var siteData = VisionStore.getSiteData();
-        siteData.news = (siteData.news || []).filter(function (item) {
-          return String(item.id) !== String(id);
-        });
-
-        VisionStore.saveSiteData(siteData);
-        renderNewsAdminList();
+        try {
+          await VisionStore.deleteNews(id);
+        } catch (error) {
+          window.alert(error && error.message ? error.message : "Unable to delete news.");
+        }
       });
     }
 
     if (instagramForm) {
-      instagramForm.addEventListener("submit", function (event) {
+      instagramForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         var rawInput = clean(instagramForm.elements.postUrl.value);
         var postUrl = extractInstagramPostUrl(rawInput);
@@ -540,41 +492,30 @@
           window.alert(t("admin_instagram_invalid", "Please enter a valid Instagram post URL or embed code."));
           return;
         }
-
-        var siteData = VisionStore.getSiteData();
-        siteData.instagramPosts = Array.isArray(siteData.instagramPosts) ? siteData.instagramPosts : [];
-        siteData.instagramPosts.unshift({
-          id: "ig_" + Date.now(),
-          url: postUrl
-        });
-        VisionStore.saveSiteData(siteData);
-        instagramForm.reset();
-        renderInstagramAdminList();
+        try {
+          await VisionStore.addInstagramPost(postUrl);
+          instagramForm.reset();
+        } catch (error) {
+          window.alert(error && error.message ? error.message : "Unable to add Instagram post.");
+        }
       });
     }
 
     if (instagramAdminList) {
-      instagramAdminList.addEventListener("click", function (event) {
+      instagramAdminList.addEventListener("click", async function (event) {
         var target = event.target;
         if (!(target instanceof HTMLElement)) {
           return;
         }
         var id = target.getAttribute("data-ig-id");
-        var indexText = target.getAttribute("data-ig-index");
-        if (!id && indexText === null) {
+        if (!id) {
           return;
         }
-        var indexNumber = Number(indexText);
-
-        var siteData = VisionStore.getSiteData();
-        siteData.instagramPosts = (siteData.instagramPosts || []).filter(function (entry, index) {
-          if (id) {
-            return String(entry.id) !== String(id);
-          }
-          return index !== indexNumber;
-        });
-        VisionStore.saveSiteData(siteData);
-        renderInstagramAdminList();
+        try {
+          await VisionStore.deleteInstagramPost(id);
+        } catch (error) {
+          window.alert(error && error.message ? error.message : "Unable to delete Instagram post.");
+        }
       });
     }
 
@@ -582,36 +523,6 @@
       exportButton.addEventListener("click", exportApplicationsCSV);
     }
 
-    // Export Settings Functionality
-    function exportSettingsJSON() {
-      var siteData = VisionStore.getSiteData();
-      var json = JSON.stringify(siteData, null, 2);
-      var blob = new Blob([json], { type: "application/json;charset=utf-8;" });
-      var url = URL.createObjectURL(blob);
-      var link = document.createElement("a");
-      link.href = url;
-      link.download = "vision-settings-" + VisionStore.todayISO() + ".json";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      setStatus("dashboardSection", t("status_exported", "Settings exported successfully! Replace the file in assets/data/settings.json and push to GitHub."), false);
-      setTimeout(function() {
-        var statusEl = byId("dashboardSection").querySelector(".status-text");
-        if (statusEl) statusEl.textContent = "";
-      }, 5000);
-    }
-
-    var exportSettingsButton = byId("exportSettings");
-    if (exportSettingsButton) {
-      exportSettingsButton.addEventListener("click", exportSettingsJSON);
-    }
-
-    window.addEventListener("vision-language-changed", function () {
-      renderMarqueeAdminList();
-      renderNewsAdminList();
-      renderInstagramAdminList();
-      renderApplicationsTable();
-    });
+    window.addEventListener("beforeunload", stopDashboardSubscriptions);
   });
 })();

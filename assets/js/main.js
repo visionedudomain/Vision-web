@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   "use strict";
 
   function t(key, fallback) {
@@ -9,35 +9,18 @@
   }
 
   var DEFAULT_HOME_CONTENT = {
-    tagline: "Coaching for School, Board, and Entrance Success",
+    tagline: "Coaching for Entrance Success",
     heroTitle: "Build your future with guided preparation.",
     heroText: "Vision Academy helps students with expert faculty, weekly tests, and personal mentoring.",
-    announcement: "Admissions open for 2026 batch. Free counseling session every Saturday."
+    announcement: "Admissions open for LDC / UDC / GALLARY ASSISTANT / JUNIOR LIBRARY ASSISTANT."
   };
 
   var DEFAULT_HOME_CONTENT_TA = {
-    tagline: "\u0baa\u0bb3\u0bcd\u0bb3\u0bbf, \u0baa\u0bcb\u0bb0\u0bcd\u0b9f\u0bcd\u0b9f\u0bc1 \u0bae\u0bb1\u0bcd\u0bb1\u0bc1\u0bae\u0bcd \u0ba8\u0bc1\u0bb4\u0bc8\u0bb5\u0bc1\u0ba4\u0bcd \u0ba4\u0bc7\u0bb0\u0bcd\u0bb5\u0bc1\u0b95\u0bb3\u0bc1\u0b95\u0bcd\u0b95\u0bbe\u0ba9 \u0baa\u0baf\u0bbf\u0bb1\u0bcd\u0b9a\u0bbf",
+    tagline: "\u0baa\u0bcb\u0b9f\u0bcd\u0b9f\u0bbf\u0ba4\u0bcd \u0ba4\u0bc7\u0bb0\u0bcd\u0bb5\u0bc1 \u0bb5\u0bc6\u0bb1\u0bcd\u0bb1\u0bbf\u0b95\u0bcd\u0b95\u0bbe\u0ba9 \u0baa\u0baf\u0bbf\u0bb1\u0bcd\u0b9a\u0bbf",
     heroTitle: "\u0bb5\u0bb4\u0bbf\u0b95\u0bbe\u0b9f\u0bcd\u0b9f\u0bb2\u0bc1\u0b9f\u0ba9\u0bcd \u0b89\u0b99\u0bcd\u0b95\u0bb3\u0bcd \u0b8e\u0ba4\u0bbf\u0bb0\u0bcd\u0b95\u0bbe\u0bb2\u0ba4\u0bcd\u0ba4\u0bc8 \u0b89\u0bb0\u0bc1\u0bb5\u0bbe\u0b95\u0bcd\u0b95\u0bc1\u0b99\u0bcd\u0b95\u0bb3\u0bcd.",
     heroText: "\u0bb5\u0bbf\u0bb7\u0ba9\u0bcd \u0b95\u0bb2\u0bcd\u0bb5\u0bbf \u0bae\u0bc8\u0baf\u0bae\u0bcd \u0ba4\u0bbf\u0bb1\u0bae\u0bc8\u0baf\u0bbe\u0ba9 \u0b86\u0b9a\u0bbf\u0bb0\u0bbf\u0baf\u0bb0\u0bcd\u0b95\u0bb3\u0bcd, \u0bb5\u0bbe\u0bb0\u0bbe\u0ba8\u0bcd\u0ba4\u0bbf\u0bb0 \u0ba4\u0bc7\u0bb0\u0bcd\u0bb5\u0bc1\u0b95\u0bb3\u0bcd \u0bae\u0bb1\u0bcd\u0bb1\u0bc1\u0bae\u0bcd \u0ba4\u0ba9\u0bbf\u0baa\u0bcd\u0baa\u0b9f\u0bcd\u0b9f \u0bb5\u0bb4\u0bbf\u0b95\u0bbe\u0b9f\u0bcd\u0b9f\u0bc1\u0ba4\u0bb2\u0bc1\u0b9f\u0ba9\u0bcd \u0bae\u0bbe\u0ba3\u0bb5\u0bb0\u0bcd\u0b95\u0bb3\u0bc8 \u0bae\u0bc1\u0ba9\u0bcd\u0ba9\u0bc7\u0bb1\u0bcd\u0bb1\u0bc1\u0b95\u0bbf\u0bb1\u0ba4\u0bc1.",
-    announcement: "2026 \u0ba4\u0bca\u0b95\u0bc1\u0ba4\u0bbf\u0b95\u0bcd\u0b95\u0bbe\u0ba9 \u0b9a\u0bc7\u0bb0\u0bcd\u0b95\u0bcd\u0b95\u0bc8 \u0ba4\u0bca\u0b9f\u0b99\u0bcd\u0b95\u0bbf\u0baf\u0bc1\u0bb3\u0bcd\u0bb3\u0ba4\u0bc1. \u0b92\u0bb5\u0bcd\u0bb5\u0bcb\u0bb0\u0bcd \u0b9a\u0ba9\u0bbf\u0b95\u0bcd\u0b95\u0bbf\u0bb4\u0bae\u0bc8\u0baf\u0bc1\u0bae\u0bcd \u0b87\u0bb2\u0bb5\u0b9a \u0b86\u0bb2\u0bcb\u0b9a\u0ba9\u0bc8."
+    announcement: "\u0b9a\u0bc7\u0bb0\u0bcd\u0b95\u0bcd\u0b95\u0bc8\u0b95\u0bb3\u0bcd LDC / UDC / GALLARY ASSISTANT / JUNIOR LIBRARY ASSISTANT \u0ba4\u0bc7\u0bb0\u0bcd\u0bb5\u0bc1\u0b95\u0bb3\u0bc1\u0b95\u0bcd\u0b95\u0bbe\u0b95 \u0ba4\u0bca\u0b9f\u0b99\u0bcd\u0b95\u0bbf\u0baf\u0bc1\u0bb3\u0bcd\u0bb3\u0ba4\u0bc1."
   };
-
-  var DEFAULT_MARQUEE_IMAGES = [
-    {
-      name: "WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg",
-      src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg"
-    },
-    {
-      name: "WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg",
-      src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg"
-    },
-    {
-      name: "WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg",
-      src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg"
-    }
-  ];
-
-  var marqueeTimerId = null;
 
   var ACADEMY_HIGHLIGHTS = {
     en: {
@@ -70,26 +53,14 @@
     }
   };
 
+  var marqueeTimerId = null;
+
   function normalizeText(value) {
-    return String(value || "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
+    return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
   }
 
   function isDefaultText(value, defaultValue) {
     return normalizeText(value) === normalizeText(defaultValue);
-  }
-
-  function getLocalizedDefaultText(value, defaultValue, i18nKey) {
-    var language = getCurrentLanguage();
-    if (isDefaultText(value, defaultValue)) {
-      if (language === "ta" && DEFAULT_HOME_CONTENT_TA[i18nKey]) {
-        return DEFAULT_HOME_CONTENT_TA[i18nKey];
-      }
-      return defaultValue;
-    }
-    return value || "";
   }
 
   function getCurrentLanguage() {
@@ -99,31 +70,12 @@
     return "en";
   }
 
-  function renderAcademyHighlights() {
-    var list = document.getElementById("academyHighlightsList");
-    if (!list) {
-      return;
-    }
-
+  function getLocalizedDefaultText(value, defaultValue, key) {
     var language = getCurrentLanguage();
-    var content = language === "ta" ? ACADEMY_HIGHLIGHTS.ta : ACADEMY_HIGHLIGHTS.en;
-
-    var title = document.getElementById("academyHighlightsTitle");
-    if (title) {
-      title.textContent = content.title;
+    if (isDefaultText(value, defaultValue) && language === "ta" && DEFAULT_HOME_CONTENT_TA[key]) {
+      return DEFAULT_HOME_CONTENT_TA[key];
     }
-
-    var subtitle = document.getElementById("academyHighlightsSubtitle");
-    if (subtitle) {
-      subtitle.textContent = content.subtitle;
-    }
-
-    list.innerHTML = "";
-    content.points.forEach(function (point) {
-      var item = document.createElement("li");
-      item.textContent = point;
-      list.appendChild(item);
-    });
+    return value || defaultValue || "";
   }
 
   function setText(id, value) {
@@ -161,11 +113,7 @@
     if (!match) {
       return "@visioneduacademy";
     }
-    var username = match[1].toLowerCase();
-    if (username === "p" || username === "reel" || username === "tv" || username === "explore") {
-      return "@visioneduacademy";
-    }
-    return "@" + username;
+    return "@" + match[1].toLowerCase();
   }
 
   function getInstagramEmbedUrl(postUrl) {
@@ -180,21 +128,14 @@
   function getMapEmbedUrl(address, mapUrl) {
     var cleanAddress = String(address || "").trim();
     var cleanMapUrl = String(mapUrl || "").trim();
-
     if (cleanAddress) {
       return "https://www.google.com/maps?q=" + encodeURIComponent(cleanAddress) + "&output=embed";
     }
-
     if (cleanMapUrl && /^https?:\/\//i.test(cleanMapUrl)) {
-      if (cleanMapUrl.indexOf("output=embed") !== -1) {
-        return cleanMapUrl;
-      }
-      if (cleanMapUrl.indexOf("?") !== -1) {
-        return cleanMapUrl + "&output=embed";
-      }
-      return cleanMapUrl + "?output=embed";
+      return cleanMapUrl.indexOf("output=embed") !== -1
+        ? cleanMapUrl
+        : cleanMapUrl + (cleanMapUrl.indexOf("?") === -1 ? "?output=embed" : "&output=embed");
     }
-
     return "https://www.google.com/maps?q=" + encodeURIComponent("Vision Education Academy Villianur Puducherry") + "&output=embed";
   }
 
@@ -204,15 +145,7 @@
     if (!match) {
       return text || "Vision Education Academy";
     }
-    var slug = decodeURIComponent(match[1]).replace(/\//g, "");
-    if (!slug || slug.toLowerCase() === "pages" || slug.toLowerCase() === "profile.php") {
-      return "Vision Education Academy";
-    }
-    var readable = slug
-      .replace(/[._-]+/g, " ")
-      .replace(/([a-z])([A-Z])/g, "$1 $2")
-      .trim();
-    return readable || "Vision Education Academy";
+    return decodeURIComponent(match[1]).replace(/[._-]+/g, " ").replace(/\//g, "").trim() || "Vision Education Academy";
   }
 
   function normalizeFacebookUrl(input) {
@@ -230,48 +163,33 @@
   }
 
   function sortByLatest(newsItems) {
-    return newsItems.slice().sort(function (a, b) {
-      return new Date(b.date) - new Date(a.date);
+    return (Array.isArray(newsItems) ? newsItems : []).slice().sort(function (a, b) {
+      return String(b.date || "").localeCompare(String(a.date || ""));
     });
   }
 
   function normalizeMarqueeItem(item, index) {
-    if (typeof item === "string") {
-      var stringSource = item.trim();
-      if (!stringSource) {
-        return null;
-      }
-      return {
-        name: "highlight-image-" + String(index),
-        src: stringSource
-      };
-    }
-
     if (!item || typeof item !== "object") {
       return null;
     }
-
     var source = String(item.src || item.url || "").trim();
     if (!source) {
       return null;
     }
-
     return {
-      name: String(item.name || "").trim() || ("highlight-image-" + String(index)),
+      id: String(item.id || ("marquee_" + index)),
+      name: String(item.name || ("highlight-image-" + String(index))).trim(),
       src: source
     };
   }
 
   function getMarqueeImages(imageItems) {
-    var images = Array.isArray(imageItems)
-      ? imageItems
-        .map(function (item, index) {
-          return normalizeMarqueeItem(item, index + 1);
-        })
-        .filter(Boolean)
-      : [];
-
-    return images.length ? images : DEFAULT_MARQUEE_IMAGES.slice();
+    if (!Array.isArray(imageItems)) {
+      return [];
+    }
+    return imageItems.map(function (item, index) {
+      return normalizeMarqueeItem(item, index + 1);
+    }).filter(Boolean);
   }
 
   function clearMarqueeTimer() {
@@ -288,11 +206,14 @@
     }
 
     clearMarqueeTimer();
+    track.innerHTML = "";
 
     var images = getMarqueeImages(imageItems);
-    var altPrefix = t("academy_name_brand", "Vision Education Academy") + " ";
+    if (!images.length) {
+      return;
+    }
 
-    track.innerHTML = "";
+    var altPrefix = t("academy_name_brand", "Vision Education Academy") + " ";
 
     images.forEach(function (item, index) {
       var figure = document.createElement("figure");
@@ -321,7 +242,6 @@
       var currentSlide = slides[activeIndex];
       var nextIndex = (activeIndex + 1) % slides.length;
       var nextSlide = slides[nextIndex];
-
       if (!currentSlide || !nextSlide) {
         return;
       }
@@ -343,6 +263,24 @@
     }, 3400);
   }
 
+  function renderAcademyHighlights() {
+    var list = document.getElementById("academyHighlightsList");
+    if (!list) {
+      return;
+    }
+
+    var content = getCurrentLanguage() === "ta" ? ACADEMY_HIGHLIGHTS.ta : ACADEMY_HIGHLIGHTS.en;
+    setText("academyHighlightsTitle", content.title);
+    setText("academyHighlightsSubtitle", content.subtitle);
+
+    list.innerHTML = "";
+    content.points.forEach(function (point) {
+      var item = document.createElement("li");
+      item.textContent = point;
+      list.appendChild(item);
+    });
+  }
+
   function renderNews(newsItems) {
     var container = document.getElementById("newsList");
     if (!container) {
@@ -350,12 +288,13 @@
     }
     container.innerHTML = "";
 
-    if (!Array.isArray(newsItems) || newsItems.length === 0) {
+    var items = sortByLatest(newsItems);
+    if (!items.length) {
       container.innerHTML = "<p class='empty-text'>" + t("home_empty_news", "No news available right now.") + "</p>";
       return;
     }
 
-    sortByLatest(newsItems).forEach(function (item) {
+    items.forEach(function (item) {
       var article = document.createElement("article");
       article.className = "news-item";
 
@@ -383,19 +322,14 @@
     }
 
     container.innerHTML = "";
-    var items = Array.isArray(postItems) ? postItems : [];
-
-    var validPosts = items
-      .map(function (entry) {
-        var url = typeof entry === "string" ? entry : entry && entry.url;
-        return {
-          id: entry && entry.id ? entry.id : "ig_" + Math.random().toString(36).slice(2, 10),
-          embedUrl: getInstagramEmbedUrl(url)
-        };
-      })
-      .filter(function (entry) {
-        return Boolean(entry.embedUrl);
-      });
+    var validPosts = (Array.isArray(postItems) ? postItems : []).map(function (entry) {
+      return {
+        id: entry && entry.id ? entry.id : "ig_" + Math.random().toString(36).slice(2, 10),
+        embedUrl: getInstagramEmbedUrl(entry && entry.url)
+      };
+    }).filter(function (entry) {
+      return Boolean(entry.embedUrl);
+    });
 
     if (!validPosts.length) {
       container.innerHTML = "<p class='empty-text'>" + t("home_instagram_empty", "No Instagram posts yet. Follow us for updates.") + "</p>";
@@ -420,49 +354,64 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function renderPage(siteData, newsItems) {
+    var safeSiteData = siteData || VisionStore.getSiteData();
+    var brandLabel = t("academy_name_brand", safeSiteData.academyName);
+
     setText("year", String(new Date().getFullYear()));
+    setText("academyName", brandLabel);
+    setText("academyNameFooter", brandLabel);
+    setText("tagline", getLocalizedDefaultText(safeSiteData.tagline, DEFAULT_HOME_CONTENT.tagline, "tagline"));
+    setText("heroTitle", getLocalizedDefaultText(safeSiteData.heroTitle, DEFAULT_HOME_CONTENT.heroTitle, "heroTitle"));
+    setText("heroText", getLocalizedDefaultText(safeSiteData.heroText, DEFAULT_HOME_CONTENT.heroText, "heroText"));
+    setText("announcement", getLocalizedDefaultText(safeSiteData.announcement, DEFAULT_HOME_CONTENT.announcement, "announcement"));
+    setText("address", safeSiteData.address);
+    setText("phone", safeSiteData.phone);
+    setText("email", safeSiteData.email);
 
-    function renderPageData() {
-      var siteData = VisionStore.getSiteData();
-      var brandLabel = t("academy_name_brand", siteData.academyName);
+    var mapUrl = safeSiteData.mapUrl || "https://maps.app.goo.gl/K3Fg2R2XbR58NR3i9";
+    setLink("addressLink", mapUrl);
+    setLink("mapOverlayLink", mapUrl);
+    setFrameSource("mapEmbed", getMapEmbedUrl(safeSiteData.address, mapUrl), t("home_map_title", "Vision Education Academy Location"));
 
-      setText("academyName", brandLabel);
-      setText("academyNameFooter", brandLabel);
-      setText("tagline", getLocalizedDefaultText(siteData.tagline, DEFAULT_HOME_CONTENT.tagline, "tagline"));
-      setText("heroTitle", getLocalizedDefaultText(siteData.heroTitle, DEFAULT_HOME_CONTENT.heroTitle, "heroTitle"));
-      setText("heroText", getLocalizedDefaultText(siteData.heroText, DEFAULT_HOME_CONTENT.heroText, "heroText"));
-      setText("announcement", getLocalizedDefaultText(siteData.announcement, DEFAULT_HOME_CONTENT.announcement, "announcement"));
-      setText("address", siteData.address);
-      setText("phone", siteData.phone);
-      setText("email", siteData.email);
+    var emailAddress = safeSiteData.email || "visionedudomain@gmail.com";
+    setLink("emailLink", "mailto:" + emailAddress);
 
-      var mapUrl = siteData.mapUrl || "https://maps.app.goo.gl/K3Fg2R2XbR58NR3i9";
-      setLink("addressLink", mapUrl);
-      setLink("mapOverlayLink", mapUrl);
-      setFrameSource("mapEmbed", getMapEmbedUrl(siteData.address, mapUrl), t("home_map_title", "Vision Education Academy Location"));
+    var instagramUrl = safeSiteData.instagramProfileUrl || "https://www.instagram.com/visioneduacademy/";
+    setLink("instagramProfileLink", instagramUrl, extractInstagramHandle(instagramUrl));
+    setLink("instagramFollowBtn", instagramUrl);
 
-      var emailAddress = siteData.email || "visionedudomain@gmail.com";
-      setLink("emailLink", "mailto:" + emailAddress);
+    var facebookUrl = normalizeFacebookUrl(safeSiteData.facebookProfileUrl);
+    setLink("facebookProfileLink", facebookUrl, extractFacebookPageName(safeSiteData.facebookProfileUrl));
+    setLink("facebookFollowBtn", facebookUrl);
 
-      var instagramUrl = siteData.instagramProfileUrl || "https://www.instagram.com/visioneduacademy/";
-      var instagramHandle = extractInstagramHandle(instagramUrl);
-      setLink("instagramProfileLink", instagramUrl, instagramHandle);
-      setLink("instagramFollowBtn", instagramUrl);
+    renderHeroMarquee(safeSiteData.marqueeImages);
+    renderAcademyHighlights();
+    renderNews(newsItems || VisionStore.getNews());
+    renderInstagramPosts(safeSiteData.instagramPosts);
+  }
 
-      var facebookInput = siteData.facebookProfileUrl || "https://www.facebook.com/visioneducacademy";
-      var facebookUrl = normalizeFacebookUrl(facebookInput);
-      var facebookName = extractFacebookPageName(facebookInput);
-      setLink("facebookProfileLink", facebookUrl, facebookName);
-      setLink("facebookFollowBtn", facebookUrl);
+  document.addEventListener("DOMContentLoaded", async function () {
+    await VisionStore.ready();
 
-      renderHeroMarquee(siteData.marqueeImages);
-      renderAcademyHighlights();
-      renderNews(siteData.news);
-      renderInstagramPosts(siteData.instagramPosts);
-    }
+    renderPage(VisionStore.getSiteData(), VisionStore.getNews());
 
-    renderPageData();
-    window.addEventListener("vision-language-changed", renderPageData);
+    var stopSiteSubscription = VisionStore.subscribeSiteData(function (siteData) {
+      renderPage(siteData, VisionStore.getNews());
+    });
+
+    var stopNewsSubscription = VisionStore.subscribeNews(function (newsItems) {
+      renderNews(newsItems);
+    });
+
+    window.addEventListener("vision-language-changed", function () {
+      renderPage(VisionStore.getSiteData(), VisionStore.getNews());
+    });
+
+    window.addEventListener("beforeunload", function () {
+      stopSiteSubscription();
+      stopNewsSubscription();
+      clearMarqueeTimer();
+    });
   });
 })();
