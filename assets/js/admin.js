@@ -348,6 +348,7 @@
     var unsubscribeSite = null;
     var unsubscribeNews = null;
     var unsubscribeApplications = null;
+    var authReadyPromise = typeof VisionStore.readyForAuth === "function" ? VisionStore.readyForAuth() : Promise.resolve();
     var storeReadyPromise = VisionStore.ready();
 
     function stopDashboardSubscriptions() {
@@ -397,7 +398,7 @@
         event.preventDefault();
         var password = clean(byId("adminPassword").value);
         try {
-          await storeReadyPromise;
+          await authReadyPromise;
           await VisionStore.loginAdmin(password);
           await VisionStore.bootstrapDefaultContent();
           clearLoginForm();

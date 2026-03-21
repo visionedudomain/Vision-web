@@ -61,6 +61,10 @@
   var unsubscribeSite = null;
   var unsubscribeNews = null;
   var unsubscribeApplications = null;
+  var authReadyResolve;
+  var authReadyPromise = new Promise(function (resolve) {
+    authReadyResolve = resolve;
+  });
   var readyPromise = initializeStore();
 
   function deepCopy(value) {
@@ -404,6 +408,13 @@
     }
   }
 
+  function resolveAuthReady() {
+    if (typeof authReadyResolve === "function") {
+      authReadyResolve();
+      authReadyResolve = null;
+    }
+  }
+
   function assertAdminSession() {
     if (!getAdminSession()) {
       throw new Error("Admin login is required.");
@@ -536,6 +547,7 @@
     var config = window.VisionFirebaseConfig || {};
     if (!hasRequiredFirebaseConfig(config)) {
       firebaseState.error = new Error("Firebase is not configured. Update assets/js/firebase-config.js first.");
+      resolveAuthReady();
       return;
     }
     try {
@@ -544,6 +556,7 @@
       firebaseState.auth = firebaseState.api.getAuth(firebaseState.app);
       firebaseState.db = firebaseState.api.getFirestore(firebaseState.app);
       firebaseState.configured = true;
+      resolveAuthReady();
 
       try {
         currentSiteData = await loadSiteDataOnce();
@@ -567,6 +580,7 @@
     } catch (error) {
       firebaseState.configured = false;
       firebaseState.error = error;
+      resolveAuthReady();
       console.error("Firebase initialization failed", error);
     }
   }
@@ -695,6 +709,7 @@
 
   window.VisionStore = {
     ready: function () { return readyPromise; },
+    readyForAuth: function () { return authReadyPromise; },
     getConfigStatus: getConfigStatus,
     getSiteData: getSiteData,
     subscribeSiteData: subscribeSiteData,
