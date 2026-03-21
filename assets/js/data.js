@@ -691,6 +691,19 @@
     });
   }
 
+  async function clearApplications() {
+    assertFirebaseConfigured();
+    assertAdminSession();
+    var snapshot = await firebaseState.api.getDocs(firebaseState.api.collection(firebaseState.db, APPLICATIONS_COLLECTION));
+    if (snapshot.empty) {
+      return 0;
+    }
+    await Promise.all(snapshot.docs.map(function (docSnapshot) {
+      return firebaseState.api.deleteDoc(firebaseState.api.doc(firebaseState.db, APPLICATIONS_COLLECTION, docSnapshot.id));
+    }));
+    return snapshot.docs.length;
+  }
+
   async function bootstrapDefaultContent() {
     assertFirebaseConfigured();
     assertAdminSession();
@@ -724,6 +737,7 @@
     getApplications: getApplications,
     subscribeApplications: subscribeApplications,
     addApplication: addApplication,
+    clearApplications: clearApplications,
     loginAdmin: loginAdmin,
     logoutAdmin: logoutAdmin,
     getAdminSession: getAdminSession,

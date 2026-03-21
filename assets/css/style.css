@@ -50,7 +50,7 @@ body::before {
   background-image: url("../images/watermark-academy.svg?v=2");
   background-repeat: no-repeat;
   background-position: center;
-  background-size: min(84vw, 920px);
+  background-size: min(74vw, 780px);
   opacity: 0.08;
   filter: grayscale(100%) brightness(0.82) contrast(0.88);
   mix-blend-mode: multiply;
@@ -735,6 +735,13 @@ textarea:focus {
   margin-bottom: 0.75rem;
 }
 
+.row-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
 .social-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1029,6 +1036,7 @@ th {
   }
 
   body::before {
+    background-size: min(78vw, 520px);
     opacity: 0.06;
   }
 }

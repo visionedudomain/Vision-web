@@ -304,7 +304,7 @@
   function exportApplicationsCSV() {
     var applications = VisionStore.getApplications();
     if (!applications.length) {
-      window.alert(t("alert_no_applications", "No applications to export."));
+      setStatus("applicationsStatus", t("alert_no_applications", "No applications to export."), true);
       return;
     }
 
@@ -343,6 +343,7 @@
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    setStatus("applicationsStatus", t("status_csv_exported", "CSV exported successfully."), false);
   }
 
   document.addEventListener("DOMContentLoaded", async function () {
@@ -357,6 +358,7 @@
     var instagramAdminList = byId("instagramAdminList");
     var marqueeAdminList = byId("marqueeAdminList");
     var exportButton = byId("exportApplications");
+    var clearApplicationsButton = byId("clearApplications");
 
     var unsubscribeSite = null;
     var unsubscribeNews = null;
@@ -565,6 +567,24 @@
 
     if (exportButton) {
       exportButton.addEventListener("click", exportApplicationsCSV);
+    }
+
+    if (clearApplicationsButton) {
+      clearApplicationsButton.addEventListener("click", async function () {
+        if (!VisionStore.getApplications().length) {
+          setStatus("applicationsStatus", t("alert_no_applications", "No applications to export."), true);
+          return;
+        }
+        if (!window.confirm(t("confirm_clear_submissions", "Clear all submitted applications from the admin table? Make sure you already exported the CSV if you need a backup."))) {
+          return;
+        }
+        try {
+          var removedCount = await VisionStore.clearApplications();
+          setStatus("applicationsStatus", t("status_submissions_cleared", "Application submissions cleared successfully.").replace("{count}", String(removedCount)), false);
+        } catch (error) {
+          setStatus("applicationsStatus", error && error.message ? error.message : t("status_submissions_clear_failed", "Unable to clear submissions right now."), true);
+        }
+      });
     }
 
     window.addEventListener("beforeunload", stopDashboardSubscriptions);

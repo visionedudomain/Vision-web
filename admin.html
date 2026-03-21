@@ -114,8 +114,12 @@
           <section class="form-card admin-block admin-span">
             <div class="row-between">
               <h2 data-i18n="admin_applications_title">Application Submissions</h2>
-              <button id="exportApplications" class="btn btn-outline" type="button" data-i18n="btn_export_csv">Export CSV</button>
+              <div class="row-inline">
+                <button id="exportApplications" class="btn btn-outline" type="button" data-i18n="btn_export_csv">Export CSV</button>
+                <button id="clearApplications" class="btn btn-danger" type="button" data-i18n="btn_clear_submissions">Clear Submissions</button>
+              </div>
             </div>
+            <p id="applicationsStatus" class="status-text" role="status"></p>
             <div class="table-wrap">
               <table>
                 <thead>
