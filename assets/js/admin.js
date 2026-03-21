@@ -48,6 +48,17 @@
     }
   }
 
+  function clearLoginForm() {
+    var loginForm = byId("loginForm");
+    var passwordInput = byId("adminPassword");
+    if (loginForm) {
+      loginForm.reset();
+    }
+    if (passwordInput) {
+      passwordInput.value = "";
+    }
+  }
+
   function toggleDashboard(isLoggedIn) {
     var loginSection = byId("loginSection");
     var dashboardSection = byId("dashboardSection");
@@ -370,6 +381,7 @@
         startDashboardSubscriptions();
       } else {
         stopDashboardSubscriptions();
+        clearLoginForm();
       }
     });
 
@@ -381,6 +393,7 @@
           await storeReadyPromise;
           await VisionStore.loginAdmin(password);
           await VisionStore.bootstrapDefaultContent();
+          clearLoginForm();
           setStatus("loginStatus", t("status_login_success", "Login successful."), false);
         } catch (error) {
           setStatus("loginStatus", error && error.message ? error.message : t("status_login_failed", "Incorrect password."), true);
@@ -394,6 +407,7 @@
       logoutButton.addEventListener("click", async function () {
         try {
           await VisionStore.logoutAdmin();
+          clearLoginForm();
           setStatus("loginStatus", "", false);
         } catch (error) {
           setStatus("loginStatus", error && error.message ? error.message : "Logout failed.", true);
