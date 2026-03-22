@@ -34,6 +34,25 @@
     }
   }
 
+  function createApiError(response, payload) {
+    var errorCode = payload && (payload.error || payload.code) ? String(payload.error || payload.code).trim() : "";
+    var errorMessage = payload && payload.message ? String(payload.message).trim() : "";
+    var fallbackMessage = response && response.status ? ("Request failed (" + String(response.status) + ").") : "Request failed.";
+    var message = errorMessage || errorCode || fallbackMessage;
+
+    if (errorCode === "usage_exceeded") {
+      message = window.VisionTestI18n
+        ? window.VisionTestI18n.t("test_status_backend_usage_exceeded", "Test server usage limit has been reached. Please contact the admin or try again later.")
+        : "Test server usage limit has been reached. Please contact the admin or try again later.";
+    }
+
+    var error = new Error(message);
+    error.code = errorCode || ("HTTP_" + String((response && response.status) || 0));
+    error.status = Number((response && response.status) || 0);
+    error.payload = payload || {};
+    return error;
+  }
+
   async function parseJson(response) {
     var payload = {};
     try {
@@ -43,18 +62,19 @@
     }
 
     if (!response.ok) {
-      throw new Error(payload && (payload.error || payload.message) ? (payload.error || payload.message) : "Request failed.");
+      throw createApiError(response, payload);
     }
     return payload;
   }
 
   async function rawRequest(name, options) {
+    var url = buildFunctionUrl(name);
+    var response;
     try {
-      var response = await fetch(buildFunctionUrl(name), Object.assign({
+      response = await fetch(url, Object.assign({
         mode: "cors",
         cache: "no-store"
       }, options || {}));
-      return parseJson(response);
     } catch (error) {
       var networkError = new Error(window.VisionTestI18n
         ? window.VisionTestI18n.t("test_status_backend_unreachable", "Cannot reach the test server. Please retry.")
@@ -63,6 +83,7 @@
       networkError.cause = error;
       throw networkError;
     }
+    return parseJson(response);
   }
 
   async function requestAdmin(name, body) {
