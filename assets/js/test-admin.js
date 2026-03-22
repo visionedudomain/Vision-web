@@ -277,10 +277,16 @@
       /^page\s+\d+/i.test(lower);
   }
 
+  function normalizeEmbeddedQuestionStarts(text) {
+    return clean(text).replace(/(^|\s)(q(?:uestion)?\s*)?((?:\d\s*){1,3})\s*([\)\].:-])\s*(?=[A-Za-z"'“‘(\[])/ig, function (_, leadingSpace, prefix, digits, punctuation) {
+      return String(leadingSpace || "") + clean(prefix || "") + String(digits || "").replace(/\s+/g, "") + punctuation + " ";
+    });
+  }
+
   function splitEmbeddedQuestionLines(text) {
-    var normalized = normalizeImportedLine(clean(text));
+    var normalized = normalizeEmbeddedQuestionStarts(normalizeImportedLine(clean(text)));
     var indices = [];
-    var matcher = /(?:^|\s)(?:q(?:uestion)?\s*)?\d{1,3}[\)\].:-]\s+/ig;
+    var matcher = /(?:^|\s)(?:q(?:uestion)?\s*)?(\d{1,3})\s*[\)\].:-]\s*(?=[A-Za-z"'“‘(\[])/ig;
     var match;
     var parts = [];
     var cursor = 0;
@@ -290,7 +296,12 @@
     }
 
     while ((match = matcher.exec(normalized))) {
-      indices.push(match.index + (match[0].charAt(0) === " " ? 1 : 0));
+      var startIndex = match.index + (match[0].charAt(0) === " " ? 1 : 0);
+      // Ignore embedded 1-4 numbered statements inside long questions like "1. ... 2. ..."
+      if (startIndex > 0 && Number(match[1] || 0) < 5) {
+        continue;
+      }
+      indices.push(startIndex);
     }
 
     if (!indices.length || (indices.length === 1 && indices[0] === 0)) {
