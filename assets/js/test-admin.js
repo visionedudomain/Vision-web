@@ -144,6 +144,17 @@
 
   var pdfJsPromise = null;
 
+  function isTamilLine(text) {
+    // Tamil Unicode range: U+0B80 to U+0BFF
+    var tamilRegex = /[\u0B80-\u0BFF]/g;
+    var tamilChars = (String(text || "").match(tamilRegex) || []).length;
+    var totalChars = String(text || "").replace(/\s+/g, "").length;
+    // Consider it Tamil if more than 30% of characters are Tamil
+    return totalChars > 0 && tamilChars / totalChars > 0.3;
+  }
+
+  var pdfJsPromise = null;
+
   function loadPdfJs() {
     if (window.pdfjsLib) {
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -206,8 +217,13 @@
       }).join(" ").replace(/\s+/g, " ").trim();
     }).filter(function (line) {
       var lower = line.toLowerCase();
-      // Filter out ONLY clear footer/header texts - be lenient with bilingual content
-      // Don't filter out lines with non-ASCII (Tamil/other scripts) as they might be questions
+      
+      // Filter out Tamil lines (for bilingual PDFs)
+      if (isTamilLine(line)) {
+        return false;
+      }
+      
+      // Filter out ONLY clear footer/header texts
       if (/^vision education academy/i.test(lower) ||
         /^contact no:/i.test(lower) ||
         /^udc\s*\/\s*ldc/i.test(lower) ||
