@@ -49,8 +49,20 @@
   }
 
   async function rawRequest(name, options) {
-    var response = await fetch(buildFunctionUrl(name), options || {});
-    return parseJson(response);
+    try {
+      var response = await fetch(buildFunctionUrl(name), Object.assign({
+        mode: "cors",
+        cache: "no-store"
+      }, options || {}));
+      return parseJson(response);
+    } catch (error) {
+      var networkError = new Error(window.VisionTestI18n
+        ? window.VisionTestI18n.t("test_status_backend_unreachable", "Cannot reach the test server. Please retry.")
+        : "Cannot reach the test server. Please retry.");
+      networkError.code = "NETWORK_ERROR";
+      networkError.cause = error;
+      throw networkError;
+    }
   }
 
   async function requestAdmin(name, body) {
@@ -107,6 +119,9 @@
     getBackendBaseUrl: getBackendBaseUrl,
     getStudentSessionToken: getStudentSessionToken,
     setStudentSessionToken: setStudentSessionToken,
+    isNetworkError: function (error) {
+      return Boolean(error && error.code === "NETWORK_ERROR");
+    },
     registerStudent: function (payload) {
       return rawRequest("test-register", {
         method: "POST",

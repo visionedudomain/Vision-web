@@ -89,13 +89,32 @@
     timerId: null,
     testData: null,
     attemptData: null,
-    resultSummary: null
+    resultSummary: null,
+    isSubmitting: false
   };
 
   function clearTimer() {
     if (portalState.timerId) {
       window.clearInterval(portalState.timerId);
       portalState.timerId = null;
+    }
+  }
+
+  function wait(ms) {
+    return new Promise(function (resolve) {
+      window.setTimeout(resolve, Number(ms || 0));
+    });
+  }
+
+  function setSubmitPending(isPending) {
+    portalState.isSubmitting = Boolean(isPending);
+    var submitButtonTop = byId("submitTestButtonTop");
+    var submitButtonBottom = byId("submitTestButtonBottom");
+    if (submitButtonTop) {
+      submitButtonTop.disabled = Boolean(isPending);
+    }
+    if (submitButtonBottom) {
+      submitButtonBottom.disabled = Boolean(isPending);
     }
   }
 
@@ -230,20 +249,25 @@
   }
 
   async function autoSubmitAttempt() {
-    if (!portalState.testData) {
+    if (!portalState.testData || portalState.isSubmitting) {
       return;
     }
+    setSubmitPending(true);
     setStatus(t("test_portal_auto_submit"), false);
     try {
-      var response = await window.VisionTestApi.submitAttempt({
+      var response = await submitAttemptWithRecovery({
         testId: portalState.testData.id,
         answers: collectAnswers(),
         autoSubmit: true
       });
-      renderResult(response.summary || response);
-      setStatus(t("test_portal_submitted"), false);
+      if (response) {
+        renderResult(response.summary || response);
+        setStatus(t("test_portal_submitted"), false);
+      }
     } catch (error) {
       setStatus(error && error.message ? error.message : t("test_status_backend_missing"), true);
+    } finally {
+      setSubmitPending(false);
     }
   }
 
@@ -267,6 +291,36 @@
     setSectionVisible("testRunnerSection", false);
     setSectionVisible("testResultSection", false);
     setStatus(getPortalStateMessage(payload.state), false);
+  }
+
+  async function tryRecoverSubmittedState() {
+    try {
+      await wait(900);
+      await refreshPortal();
+      return Boolean(portalState.activePayload && portalState.activePayload.state === "submitted");
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  async function submitAttemptWithRecovery(payload) {
+    try {
+      return await window.VisionTestApi.submitAttempt(payload);
+    } catch (error) {
+      if (!window.VisionTestApi.isNetworkError || !window.VisionTestApi.isNetworkError(error)) {
+        throw error;
+      }
+      await wait(600);
+      try {
+        return await window.VisionTestApi.submitAttempt(payload);
+      } catch (retryError) {
+        if ((!window.VisionTestApi.isNetworkError || !window.VisionTestApi.isNetworkError(retryError)) || !(await tryRecoverSubmittedState())) {
+          throw retryError;
+        }
+      }
+    }
+    return null;
   }
 
   document.addEventListener("DOMContentLoaded", async function () {
@@ -343,22 +397,27 @@
     }
 
     async function submitNow() {
-      if (!portalState.testData) {
+      if (!portalState.testData || portalState.isSubmitting) {
         return;
       }
       if (!window.confirm(t("test_portal_submit_confirm"))) {
         return;
       }
+      setSubmitPending(true);
       try {
-        var response = await window.VisionTestApi.submitAttempt({
+        var response = await submitAttemptWithRecovery({
           testId: portalState.testData.id,
           answers: collectAnswers(),
           autoSubmit: false
         });
-        renderResult(response.summary || response);
-        setStatus(t("test_portal_submitted"), false);
+        if (response) {
+          renderResult(response.summary || response);
+          setStatus(t("test_portal_submitted"), false);
+        }
       } catch (error) {
         setStatus(error && error.message ? error.message : t("test_status_backend_missing"), true);
+      } finally {
+        setSubmitPending(false);
       }
     }
 
