@@ -130,6 +130,12 @@
     return /^(?:q(?:uestion)?\s*)?\d{1,3}[\)\].:-]\s*/i.test(normalizeQuestionStartLine(text));
   }
 
+  function getQuestionStartNumber(text) {
+    var match = normalizeQuestionStartLine(text).match(/^(?:q(?:uestion)?\s*)?(\d{1,3})[\)\].:-]\s*/i);
+    var number = match ? Number(match[1]) : 0;
+    return number >= 1 && number <= EXPECTED_IMPORTED_QUESTION_COUNT ? number : 0;
+  }
+
   function escapeHtml(value) {
     return String(value || "").replace(/[&<>"']/g, function (character) {
       return {
@@ -543,32 +549,16 @@
 
   function extractInlineOptions(text) {
     var options = [];
-    var matcher = /([A-D])\s*[\)\].:-]\s*(.*?)(?=(?:\s+[A-D]\s*[\)\].:-]\s)|$)/gi;
+    var matcher = /(?:^|\s)(?:\(([A-Da-d1-4])\)|([A-Da-d1-4])\s*[\)\].:-])\s*(.*?)(?=(?:\s+(?:\([A-Da-d1-4]\)|[A-Da-d1-4]\s*[\)\].:-]))|$)/g;
     var match;
 
     while ((match = matcher.exec(String(text || "")))) {
+      var optionId = String(match[1] || match[2] || "").toLowerCase();
+      var letterMap = { "1": "a", "2": "b", "3": "c", "4": "d" };
       options.push({
-        id: String(match[1]).toLowerCase(),
-        text: clean(match[2])
+        id: letterMap[optionId] || optionId,
+        text: clean(match[3])
       });
-    }
-
-    // Fallback: if no letter options found, try numeric options (1,2,3,4) and convert to a,b,c,d
-    if (!options.length) {
-      var numTexts = String(text || "").match(/([1-4])\s*[\)\].:-]\s*([^\n\d]+?)(?=(?:[1-4]\s*[\)\].-]|$))/gi);
-      if (Array.isArray(numTexts)) {
-        numTexts.forEach(function (optionText) {
-          var m = optionText.match(/([1-4])\s*[\)\].:-]\s*(.*)/i);
-          if (m) {
-            var numId = String(m[1]);
-            var letterMap = { "1": "a", "2": "b", "3": "c", "4": "d" };
-            options.push({
-              id: letterMap[numId] || numId,
-              text: clean(m[2])
-            });
-          }
-        });
-      }
     }
 
     return options.filter(function (option, index, list) {
@@ -738,14 +728,17 @@
     var blocks = [];
     var currentBlock = [];
     var pendingPreamble = [];
+    var lastQuestionNumber = 0;
 
     contentLines.forEach(function (line) {
-      if (isQuestionStartLine(line)) {
+      var questionNumber = getQuestionStartNumber(line);
+      if (questionNumber && (!lastQuestionNumber || questionNumber > lastQuestionNumber)) {
         if (currentBlock.length) {
           blocks.push(currentBlock);
         }
         currentBlock = pendingPreamble.concat([line]);
         pendingPreamble = [];
+        lastQuestionNumber = questionNumber;
       } else if (/^(?:read the|directions|instructions|note:|passage)\b/i.test(clean(line))) {
         pendingPreamble.push(line);
       } else if (pendingPreamble.length > 0) {
