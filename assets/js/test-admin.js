@@ -149,8 +149,8 @@
     var tamilRegex = /[\u0B80-\u0BFF]/g;
     var tamilChars = (String(text || "").match(tamilRegex) || []).length;
     var totalChars = String(text || "").replace(/\s+/g, "").length;
-    // Consider it Tamil if more than 30% of characters are Tamil
-    return totalChars > 0 && tamilChars / totalChars > 0.3;
+    // Consider it Tamil if detected ANY Tamil characters OR more than 15% of characters are Tamil
+    return totalChars > 0 && (tamilChars > 0 || tamilChars / totalChars > 0.15);
   }
 
   var pdfJsPromise = null;
