@@ -435,11 +435,42 @@
       blocks.push(currentBlock);
     }
 
-    var parsedQuestions = blocks.map(function (block, index) {
-      return parseQuestionBlock(block, answerMap, index, false);
-    }).filter(Boolean);
+    var byQuestionNumber = {};
+    parsedQuestions.forEach(function (question) {
+      var key = clean(question.questionNumber || question.id);
+      var existing = byQuestionNumber[key];
+      if (!existing) {
+        byQuestionNumber[key] = question;
+      } else {
+        existing.prompt = clean(existing.prompt) + "\n\n" + clean(question.prompt);
+        var mergedOptions = [];
+        var maxOptionsCount = Math.max(existing.options.length, question.options.length);
+        for (var i = 0; i < maxOptionsCount; i++) {
+          var optA = existing.options[i];
+          var optB = question.options[i];
+          if (optA && optB) {
+            mergedOptions.push({
+              id: optA.id || optB.id,
+              text: clean(optA.text) + " / " + clean(optB.text)
+            });
+          } else if (optA) {
+            mergedOptions.push(optA);
+          } else if (optB) {
+            mergedOptions.push(optB);
+          }
+        }
+        existing.options = mergedOptions;
+        if (!existing.correctOptionId && question.correctOptionId) {
+          existing.correctOptionId = question.correctOptionId;
+        }
+      }
+    });
 
-    return parsedQuestions;
+    return Object.keys(byQuestionNumber).sort(function (left, right) {
+      return Number(left) - Number(right);
+    }).map(function (key) {
+      return byQuestionNumber[key];
+    });
   }
 
   function parseAnswerKeyFromPdfLines(lines) {
