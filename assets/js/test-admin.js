@@ -211,7 +211,7 @@
         /contact no:/i.test(lower) ||
         /udc\/ldc/i.test(lower) ||
         /operation cauvery/i.test(lower) ||
-        /paper\s*-\s*i/i.test(lower) ||
+        /paper\s*(?:[-–—:;]|\d{1,2}|i{1,3}|[ivx]+)/i.test(lower) ||
         /date:\s*\d{2}/i.test(lower) ||
         /^\**$/.test(lower)) {
         return false;
