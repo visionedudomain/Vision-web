@@ -142,6 +142,7 @@
     });
   }
 
+  var EXPECTED_IMPORTED_QUESTION_COUNT = 100;
   var pdfJsPromise = null;
 
   function isTamilLine(text) {
@@ -153,8 +154,6 @@
     // Keep English lines even if they have 1-2 Tamil characters
     return totalChars > 5 && tamilChars / totalChars > 0.5;
   }
-
-  var pdfJsPromise = null;
 
   function loadPdfJs() {
     if (window.pdfjsLib) {
@@ -255,6 +254,280 @@
     }
 
     return lines;
+  }
+
+  function shouldSkipImportedLine(line) {
+    var lower = clean(line).toLowerCase();
+    if (!lower) {
+      return true;
+    }
+
+    if (isTamilLine(line)) {
+      return true;
+    }
+
+    return /^vision education academy/i.test(lower) ||
+      /^contact no:/i.test(lower) ||
+      /^udc\s*\/\s*ldc/i.test(lower) ||
+      /^operation cauvery/i.test(lower) ||
+      /^\s*?(?:paper|exam)\s*(?:[-â€“â€”:;]\s*)?(?:\d{1,2}|i{1,3}|[ivx]+)\s*?$/i.test(lower) ||
+      /^date:\s*\d{1,2}/i.test(lower) ||
+      /^time\s*:/i.test(lower) ||
+      /^\**$/.test(lower) ||
+      /^page\s+\d+/i.test(lower);
+  }
+
+  function splitEmbeddedQuestionLines(text) {
+    var normalized = normalizeImportedLine(clean(text));
+    var indices = [];
+    var matcher = /(?:^|\s)(?:q(?:uestion)?\s*)?\d{1,3}[\)\].:-]\s+/ig;
+    var match;
+    var parts = [];
+    var cursor = 0;
+
+    if (!normalized) {
+      return parts;
+    }
+
+    while ((match = matcher.exec(normalized))) {
+      indices.push(match.index + (match[0].charAt(0) === " " ? 1 : 0));
+    }
+
+    if (!indices.length || (indices.length === 1 && indices[0] === 0)) {
+      return [normalized];
+    }
+
+    indices.forEach(function (startIndex) {
+      var part = clean(normalized.slice(cursor, startIndex));
+      if (part) {
+        parts.push(part);
+      }
+      cursor = startIndex;
+    });
+
+    var tail = clean(normalized.slice(cursor));
+    if (tail) {
+      parts.push(tail);
+    }
+
+    return parts;
+  }
+
+  function groupPdfItemsByRow(items) {
+    var rows = [];
+
+    (Array.isArray(items) ? items : []).forEach(function (item) {
+      var text = clean(item && item.str);
+      if (!text) {
+        return;
+      }
+      var transform = item.transform || [];
+      var rowY = Math.round(Number(transform[5] || 0));
+      var row = rows.find(function (entry) {
+        return Math.abs(entry.y - rowY) <= 2;
+      });
+      if (!row) {
+        row = { y: rowY, items: [] };
+        rows.push(row);
+      }
+      row.items.push({
+        x: Number(transform[4] || 0),
+        width: Number(item && item.width || 0),
+        text: text
+      });
+    });
+
+    return rows.sort(function (left, right) {
+      return right.y - left.y;
+    });
+  }
+
+  function splitPdfRowIntoSegments(rowItems, pageWidth) {
+    var segments = [];
+    var currentSegment = null;
+    var gapThreshold = Math.max(48, Number(pageWidth || 0) * 0.09);
+
+    (Array.isArray(rowItems) ? rowItems : []).slice().sort(function (left, right) {
+      return left.x - right.x;
+    }).forEach(function (item) {
+      var itemText = clean(item && item.text);
+      if (!itemText) {
+        return;
+      }
+
+      if (!currentSegment) {
+        currentSegment = {
+          x: Number(item.x || 0),
+          items: [item]
+        };
+        return;
+      }
+
+      var lastItem = currentSegment.items[currentSegment.items.length - 1];
+      var lastWidth = Number(lastItem.width || 0) > 0 ? Number(lastItem.width || 0) : String(lastItem.text || "").length * 4;
+      var lastRight = Number(lastItem.x || 0) + lastWidth;
+      var gap = Number(item.x || 0) - lastRight;
+
+      if (gap > gapThreshold) {
+        segments.push({
+          x: currentSegment.x,
+          text: currentSegment.items.map(function (segmentItem) {
+            return segmentItem.text;
+          }).join(" ").replace(/\s+/g, " ").trim()
+        });
+        currentSegment = {
+          x: Number(item.x || 0),
+          items: [item]
+        };
+        return;
+      }
+
+      currentSegment.items.push(item);
+    });
+
+    if (currentSegment && currentSegment.items.length) {
+      segments.push({
+        x: currentSegment.x,
+        text: currentSegment.items.map(function (segmentItem) {
+          return segmentItem.text;
+        }).join(" ").replace(/\s+/g, " ").trim()
+      });
+    }
+
+    return segments;
+  }
+
+  function getPdfColumnAnchors(segments, pageWidth) {
+    var sourceSegments = (Array.isArray(segments) ? segments : []).filter(function (segment) {
+      return isQuestionStartLine(segment.text);
+    });
+    var positions = (sourceSegments.length ? sourceSegments : (Array.isArray(segments) ? segments : [])).map(function (segment) {
+      return Number(segment.x || 0);
+    }).sort(function (left, right) {
+      return left - right;
+    });
+    var clusters = [];
+    var gapThreshold = Math.max(96, Number(pageWidth || 0) * 0.18);
+
+    positions.forEach(function (position) {
+      var current = clusters[clusters.length - 1];
+      if (!current || position - current.max > gapThreshold) {
+        clusters.push({
+          min: position,
+          max: position,
+          sum: position,
+          count: 1
+        });
+        return;
+      }
+      current.max = position;
+      current.sum += position;
+      current.count += 1;
+    });
+
+    if (sourceSegments.length && clusters.length > 1) {
+      var significantClusters = clusters.filter(function (cluster) {
+        return cluster.count > 1;
+      });
+      if (significantClusters.length) {
+        clusters = significantClusters;
+      }
+    }
+
+    return clusters.map(function (cluster) {
+      return cluster.sum / cluster.count;
+    });
+  }
+
+  function getPdfColumnIndex(x, anchors) {
+    var index;
+    if (!Array.isArray(anchors) || anchors.length <= 1) {
+      return 0;
+    }
+    for (index = 0; index < anchors.length - 1; index += 1) {
+      if (Number(x || 0) <= (anchors[index] + anchors[index + 1]) / 2) {
+        return index;
+      }
+    }
+    return anchors.length - 1;
+  }
+
+  function sortPdfSegmentsTopDown(left, right) {
+    if (Math.abs(Number(left.y || 0) - Number(right.y || 0)) > 2) {
+      return Number(right.y || 0) - Number(left.y || 0);
+    }
+    return Number(left.x || 0) - Number(right.x || 0);
+  }
+
+  function extractPdfLinesByColumn(items, pageWidth) {
+    var segments = [];
+    var anchors;
+    var columns;
+
+    groupPdfItemsByRow(items).forEach(function (row) {
+      splitPdfRowIntoSegments(row.items, pageWidth).forEach(function (segment) {
+        splitEmbeddedQuestionLines(segment.text).forEach(function (line) {
+          if (!shouldSkipImportedLine(line)) {
+            segments.push({
+              x: segment.x,
+              y: row.y,
+              text: line
+            });
+          }
+        });
+      });
+    });
+
+    if (!segments.length) {
+      return [];
+    }
+
+    anchors = getPdfColumnAnchors(segments, pageWidth);
+    if (!anchors.length || anchors.length === 1) {
+      return segments.sort(sortPdfSegmentsTopDown).map(function (segment) {
+        return segment.text;
+      });
+    }
+
+    columns = anchors.map(function () {
+      return [];
+    });
+
+    segments.forEach(function (segment) {
+      columns[getPdfColumnIndex(segment.x, anchors)].push(segment);
+    });
+
+    return columns.reduce(function (lines, column) {
+      return lines.concat(column.sort(sortPdfSegmentsTopDown).map(function (segment) {
+        return segment.text;
+      }));
+    }, []);
+  }
+
+  async function extractPdfLineVariants(file) {
+    var pdfjsLib = await loadPdfJs();
+    var arrayBuffer = await file.arrayBuffer();
+    var documentTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    var pdf = await documentTask.promise;
+    var variants = {
+      standard: [],
+      columnAware: []
+    };
+    var pageIndex;
+
+    for (pageIndex = 1; pageIndex <= pdf.numPages; pageIndex += 1) {
+      var page = await pdf.getPage(pageIndex);
+      var viewport = page.getViewport({ scale: 1 });
+      var textContent = await page.getTextContent();
+      variants.standard = variants.standard.concat(collectPdfLines(textContent.items).reduce(function (lines, line) {
+        return lines.concat(splitEmbeddedQuestionLines(line));
+      }, []).filter(function (line) {
+        return !shouldSkipImportedLine(line);
+      }));
+      variants.columnAware = variants.columnAware.concat(extractPdfLinesByColumn(textContent.items, viewport && viewport.width));
+    }
+
+    return variants;
   }
 
   function extractInlineOptions(text) {
@@ -441,7 +714,9 @@
   }
 
   function parseQuestionsFromPdfLines(lines) {
-    var normalizedLines = (Array.isArray(lines) ? lines : []).map(function (line) {
+    var normalizedLines = (Array.isArray(lines) ? lines : []).reduce(function (list, line) {
+      return list.concat(splitEmbeddedQuestionLines(String(line || "")));
+    }, []).map(function (line) {
       return normalizeImportedLine(clean(String(line || "").replace(/\s+/g, " ")));
     }).filter(Boolean);
     var answerSectionIndex = normalizedLines.findIndex(function (line) {
@@ -513,6 +788,108 @@
     }).map(function (key) {
       return byQuestionNumber[key];
     });
+  }
+
+  function getImportedQuestionMetrics(questionList) {
+    var numbers = {};
+    var maxNumber = 0;
+    var exactCount = 0;
+    var value;
+    var numberKey;
+    var index;
+
+    (Array.isArray(questionList) ? questionList : []).forEach(function (question, questionIndex) {
+      value = Number(extractQuestionNumberFromQuestion(question, questionIndex));
+      if (!Number.isFinite(value) || value <= 0) {
+        return;
+      }
+      numberKey = String(value);
+      numbers[numberKey] = true;
+      if (value > maxNumber) {
+        maxNumber = value;
+      }
+    });
+
+    for (index = 1; index <= EXPECTED_IMPORTED_QUESTION_COUNT; index += 1) {
+      if (numbers[String(index)]) {
+        exactCount += 1;
+      }
+    }
+
+    return {
+      count: Array.isArray(questionList) ? questionList.length : 0,
+      uniqueCount: Object.keys(numbers).length,
+      exactCount: exactCount,
+      maxNumber: maxNumber
+    };
+  }
+
+  function selectBestImportedQuestions(candidates) {
+    var rankedCandidates = (Array.isArray(candidates) ? candidates : []).map(function (candidate) {
+      var questions = parseQuestionsFromPdfLines(candidate && candidate.lines);
+      return {
+        name: clean(candidate && candidate.name),
+        questions: questions,
+        metrics: getImportedQuestionMetrics(questions)
+      };
+    }).filter(function (candidate) {
+      return candidate.questions.length;
+    });
+
+    rankedCandidates.sort(function (left, right) {
+      var leftDistance = Math.abs(left.metrics.count - EXPECTED_IMPORTED_QUESTION_COUNT);
+      var rightDistance = Math.abs(right.metrics.count - EXPECTED_IMPORTED_QUESTION_COUNT);
+      if (right.metrics.exactCount !== left.metrics.exactCount) {
+        return right.metrics.exactCount - left.metrics.exactCount;
+      }
+      if (leftDistance !== rightDistance) {
+        return leftDistance - rightDistance;
+      }
+      if (right.metrics.count !== left.metrics.count) {
+        return right.metrics.count - left.metrics.count;
+      }
+      if (right.metrics.uniqueCount !== left.metrics.uniqueCount) {
+        return right.metrics.uniqueCount - left.metrics.uniqueCount;
+      }
+      return right.metrics.maxNumber - left.metrics.maxNumber;
+    });
+
+    return rankedCandidates[0] || {
+      name: "",
+      questions: [],
+      metrics: getImportedQuestionMetrics([])
+    };
+  }
+
+  function getIncompleteImportMessage(metrics) {
+    return replaceTokens(t("test_builder_pdf_incomplete", "Could import only {count} of {expected} questions from this PDF."), {
+      count: String(Number(metrics && metrics.exactCount || metrics && metrics.count || 0)),
+      expected: String(EXPECTED_IMPORTED_QUESTION_COUNT)
+    });
+  }
+
+  async function extractQuestionsFromPdfFile(file) {
+    var variants = await extractPdfLineVariants(file);
+    var bestMatch = selectBestImportedQuestions([
+      {
+        name: "standard",
+        lines: variants.standard
+      },
+      {
+        name: "columnAware",
+        lines: variants.columnAware
+      }
+    ]);
+
+    if (!bestMatch.questions.length) {
+      throw new Error(t("test_builder_pdf_invalid"));
+    }
+
+    if (bestMatch.metrics.count !== EXPECTED_IMPORTED_QUESTION_COUNT || bestMatch.metrics.exactCount !== EXPECTED_IMPORTED_QUESTION_COUNT) {
+      throw new Error(getIncompleteImportMessage(bestMatch.metrics));
+    }
+
+    return bestMatch.questions;
   }
 
   function parseAnswerKeyFromPdfLines(lines) {
@@ -967,8 +1344,7 @@
         }
         try {
           setStatus("testBuilderStatus", t("test_builder_pdf_loading"), false);
-          var lines = await extractPdfLines(file);
-          builderQuestions = parseQuestionsFromPdfLines(lines).map(function (question, index) {
+          builderQuestions = (await extractQuestionsFromPdfFile(file)).map(function (question, index) {
             return {
               id: question.id || ("question_" + String(index + 1)),
               questionNumber: extractQuestionNumberFromQuestion(question, index),
