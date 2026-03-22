@@ -206,14 +206,17 @@
       }).join(" ").replace(/\s+/g, " ").trim();
     }).filter(function (line) {
       var lower = line.toLowerCase();
-      // Filter out footer/header texts that break question parsing
-      if (/vision education academy/i.test(lower) ||
-        /contact no:/i.test(lower) ||
-        /udc\/ldc/i.test(lower) ||
-        /operation cauvery/i.test(lower) ||
-        /^\s*paper\s*(?:[-–—:;]\s*)?(?:\d{1,2}|i{1,3}|[ivx]+)\s*$/i.test(lower) ||
-        /date:\s*\d{2}/i.test(lower) ||
-        /^\**$/.test(lower)) {
+      // Filter out ONLY clear footer/header texts - be lenient with bilingual content
+      // Don't filter out lines with non-ASCII (Tamil/other scripts) as they might be questions
+      if (/^vision education academy/i.test(lower) ||
+        /^contact no:/i.test(lower) ||
+        /^udc\s*\/\s*ldc/i.test(lower) ||
+        /^operation cauvery/i.test(lower) ||
+        /^\s*?(?:paper|exam)\s*(?:[-–—:;]\s*)?(?:\d{1,2}|i{1,3}|[ivx]+)\s*?$/i.test(lower) ||
+        /^date:\s*\d{1,2}/i.test(lower) ||
+        /^time\s*:/i.test(lower) ||
+        /^\**$/.test(lower) ||
+        /^page\s+\d+/i.test(lower)) {
         return false;
       }
       return !!line;
