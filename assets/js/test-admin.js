@@ -435,6 +435,10 @@
       blocks.push(currentBlock);
     }
 
+    var parsedQuestions = blocks.map(function (block, index) {
+      return parseQuestionBlock(block, answerMap, index, false);
+    }).filter(Boolean);
+
     var byQuestionNumber = {};
     parsedQuestions.forEach(function (question) {
       var key = clean(question.questionNumber || question.id);
