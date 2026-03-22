@@ -303,7 +303,10 @@
   }
 
   function parseQuestionBlock(blockLines, answerMap, fallbackIndex, requireAnswer) {
-    var firstLine = normalizeQuestionStartLine(clean(blockLines && blockLines[0]));
+    var qIndex = (blockLines || []).findIndex(function (line) { return isQuestionStartLine(line); });
+    if (qIndex < 0) qIndex = 0;
+
+    var firstLine = normalizeQuestionStartLine(clean(blockLines[qIndex]));
     var firstMatch = firstLine.match(/^(?:q(?:uestion)?\s*)?(\d{1,3})[\)\].:-]\s*(.*)$/i);
     if (!firstMatch) {
       return null;
@@ -311,10 +314,13 @@
 
     var questionNumber = String(firstMatch[1]);
     var rawLines = [];
+    if (qIndex > 0) {
+      rawLines.push(blockLines.slice(0, qIndex).join(" "));
+    }
     if (clean(firstMatch[2])) {
       rawLines.push(clean(firstMatch[2]));
     }
-    rawLines = rawLines.concat((Array.isArray(blockLines) ? blockLines.slice(1) : []).map(function (line) {
+    rawLines = rawLines.concat((Array.isArray(blockLines) ? blockLines.slice(qIndex + 1) : []).map(function (line) {
       return normalizeImportedLine(clean(line));
     }).filter(Boolean));
 
@@ -388,7 +394,7 @@
     }
 
     return {
-      id: "question_" + questionNumber,
+      id: "question_" + questionNumber + "_" + Math.random().toString(36).substr(2, 6),
       questionNumber: questionNumber,
       prompt: prompt,
       options: options,
@@ -401,29 +407,25 @@
       return normalizeImportedLine(clean(String(line || "").replace(/\s+/g, " ")));
     }).filter(Boolean);
     var answerSectionIndex = normalizedLines.findIndex(function (line) {
-      return /^(?:answer\s*key|answers?)\b/i.test(line);
+      return /^(?:answer\s*key|answers?)$/i.test(clean(line));
     });
-    if (answerSectionIndex < 0) {
-      answerSectionIndex = normalizedLines.findIndex(function (line) {
-        var matches = String(line || "").match(/(\d{1,3})\s*[\)\].:-]?\s*[A-D](?=\b)/ig);
-        if (!Array.isArray(matches) || matches.length < 2) {
-          return false;
-        }
-        var cleanLine = String(line || "").replace(/(\d{1,3})\s*[\)\].:-]?\s*[A-D](?=\b)/ig, "").replace(/[^a-z]/ig, "");
-        return cleanLine.length < 15 || matches.length >= 4;
-      });
-    }
     var answerMap = extractAnswerKeyMap(answerSectionIndex >= 0 ? normalizedLines.slice(answerSectionIndex) : []);
     var contentLines = answerSectionIndex >= 0 ? normalizedLines.slice(0, answerSectionIndex) : normalizedLines;
     var blocks = [];
     var currentBlock = [];
+    var pendingPreamble = [];
 
     contentLines.forEach(function (line) {
       if (isQuestionStartLine(line)) {
         if (currentBlock.length) {
           blocks.push(currentBlock);
         }
-        currentBlock = [line];
+        currentBlock = pendingPreamble.concat([line]);
+        pendingPreamble = [];
+      } else if (/^(?:read the|directions|instructions|note:|passage)\b/i.test(clean(line))) {
+        pendingPreamble.push(line);
+      } else if (pendingPreamble.length > 0) {
+        pendingPreamble.push(line);
       } else if (currentBlock.length) {
         currentBlock.push(line);
       }
@@ -437,20 +439,7 @@
       return parseQuestionBlock(block, answerMap, index, false);
     }).filter(Boolean);
 
-    var byQuestionNumber = {};
-    parsedQuestions.forEach(function (question) {
-      var key = clean(question.questionNumber || question.id);
-      var existing = byQuestionNumber[key];
-      if (!existing || question.options.length > existing.options.length || clean(question.prompt).length > clean(existing.prompt).length) {
-        byQuestionNumber[key] = question;
-      }
-    });
-
-    return Object.keys(byQuestionNumber).sort(function (left, right) {
-      return Number(left) - Number(right);
-    }).map(function (key) {
-      return byQuestionNumber[key];
-    });
+    return parsedQuestions;
   }
 
   function parseAnswerKeyFromPdfLines(lines) {
