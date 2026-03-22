@@ -249,6 +249,24 @@
       });
     }
 
+    // Fallback: if no letter options found, try numeric options (1,2,3,4) and convert to a,b,c,d
+    if (!options.length) {
+      var numTexts = String(text || "").match(/([1-4])\s*[\)\].:-]\s*([^\n\d]+?)(?=(?:[1-4]\s*[\)\].-]|$))/gi);
+      if (Array.isArray(numTexts)) {
+        numTexts.forEach(function (optionText) {
+          var m = optionText.match(/([1-4])\s*[\)\].:-]\s*(.*)/i);
+          if (m) {
+            var numId = String(m[1]);
+            var letterMap = { "1": "a", "2": "b", "3": "c", "4": "d" };
+            options.push({
+              id: letterMap[numId] || numId,
+              text: clean(m[2])
+            });
+          }
+        });
+      }
+    }
+
     return options.filter(function (option, index, list) {
       return option.text && list.findIndex(function (entry) {
         return entry.id === option.id;
