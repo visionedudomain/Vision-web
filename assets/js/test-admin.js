@@ -204,7 +204,20 @@
       }).map(function (item) {
         return item.text;
       }).join(" ").replace(/\s+/g, " ").trim();
-    }).filter(Boolean);
+    }).filter(function (line) {
+      var lower = line.toLowerCase();
+      // Filter out footer/header texts that break question parsing
+      if (/vision education academy/i.test(lower) ||
+        /contact no:/i.test(lower) ||
+        /udc\/ldc/i.test(lower) ||
+        /operation cauvery/i.test(lower) ||
+        /paper\s*-\s*i/i.test(lower) ||
+        /date:\s*\d{2}/i.test(lower) ||
+        /^\**$/.test(lower)) {
+        return false;
+      }
+      return !!line;
+    });
   }
 
   async function extractPdfLines(file) {
@@ -297,13 +310,22 @@
     }
 
     var questionNumber = String(firstMatch[1]);
-    var lines = [];
+    var rawLines = [];
     if (clean(firstMatch[2])) {
-      lines.push(clean(firstMatch[2]));
+      rawLines.push(clean(firstMatch[2]));
     }
-    lines = lines.concat((Array.isArray(blockLines) ? blockLines.slice(1) : []).map(function (line) {
+    rawLines = rawLines.concat((Array.isArray(blockLines) ? blockLines.slice(1) : []).map(function (line) {
       return normalizeImportedLine(clean(line));
     }).filter(Boolean));
+
+    var lines = [];
+    rawLines.forEach(function (line) {
+      String(line || "").split(/(?=(?:^|\s+)[A-D]\s*[\)\].:-](?:\s+|$))/i).forEach(function (part) {
+        if (clean(part)) {
+          lines.push(clean(part));
+        }
+      });
+    });
 
     var promptParts = [];
     var options = [];
@@ -511,9 +533,9 @@
           "<td>" + (registration.examName || "-") + "</td>" +
           "<td><span class='status-pill status-pill-" + (registration.status || "draft") + "'>" + getStatusLabel(registration.status || "pending") + "</span></td>" +
           "<td><div class='table-actions'>" +
-            (registration.status === "pending"
-              ? "<button type='button' class='btn btn-primary btn-small' data-approve-registration='" + registration.id + "'>" + t("test_btn_approve_student") + "</button>"
-              : "<span class='table-subtext'>" + window.VisionTestStore.formatDateTime(registration.approvedAt || registration.updatedAt || registration.createdAt) + "</span>") +
+          (registration.status === "pending"
+            ? "<button type='button' class='btn btn-primary btn-small' data-approve-registration='" + registration.id + "'>" + t("test_btn_approve_student") + "</button>"
+            : "<span class='table-subtext'>" + window.VisionTestStore.formatDateTime(registration.approvedAt || registration.updatedAt || registration.createdAt) + "</span>") +
           "</div></td>";
         registrationsBody.appendChild(row);
       });
@@ -538,8 +560,8 @@
           "<td>" + (student.language === "ta" ? t("test_language_tamil") : t("test_language_english")) + "</td>" +
           "<td><span class='status-pill status-pill-" + (student.status || "draft") + "'>" + getStatusLabel(student.status || "approved") + "</span></td>" +
           "<td><div class='table-actions'>" +
-            "<button type='button' class='btn btn-outline btn-small' data-reset-student-password='" + student.id + "'>" + t("test_btn_reset_password") + "</button>" +
-            "<button type='button' class='btn " + (student.status === "inactive" ? "btn-primary" : "btn-danger") + " btn-small' data-update-student-status='" + student.id + "' data-next-status='" + (student.status === "inactive" ? "approved" : "inactive") + "'>" + (student.status === "inactive" ? t("test_btn_activate") : t("test_btn_deactivate")) + "</button>" +
+          "<button type='button' class='btn btn-outline btn-small' data-reset-student-password='" + student.id + "'>" + t("test_btn_reset_password") + "</button>" +
+          "<button type='button' class='btn " + (student.status === "inactive" ? "btn-primary" : "btn-danger") + " btn-small' data-update-student-status='" + student.id + "' data-next-status='" + (student.status === "inactive" ? "approved" : "inactive") + "'>" + (student.status === "inactive" ? t("test_btn_activate") : t("test_btn_deactivate")) + "</button>" +
           "</div></td>";
         studentsBody.appendChild(row);
       });
@@ -556,19 +578,19 @@
 
       var questionMessage = builderSourceMode === "draft"
         ? replaceTokens(t("test_builder_pdf_saved_summary"), {
-            count: builderQuestions.length,
-            name: builderSourceName || (testBuilderForm && clean(testBuilderForm.elements.title.value)) || t("test_builder_title")
-          })
+          count: builderQuestions.length,
+          name: builderSourceName || (testBuilderForm && clean(testBuilderForm.elements.title.value)) || t("test_builder_title")
+        })
         : replaceTokens(t("test_builder_pdf_summary"), {
-            count: builderQuestions.length,
-            name: builderSourceName || "question-paper.pdf"
-          });
+          count: builderQuestions.length,
+          name: builderSourceName || "question-paper.pdf"
+        });
 
       var answerMessage = builderMatchedAnswerCount
         ? replaceTokens(t("test_builder_answer_pdf_summary"), {
-            count: builderMatchedAnswerCount,
-            name: builderAnswerSourceName || builderSourceName || "answer-key.pdf"
-          })
+          count: builderMatchedAnswerCount,
+          name: builderAnswerSourceName || builderSourceName || "answer-key.pdf"
+        })
         : t("test_builder_answer_pdf_missing");
 
       testImportSummary.innerHTML =
@@ -595,10 +617,10 @@
           "<td>" + (test.questionCount || 0) + "</td>" +
           "<td><span class='status-pill status-pill-" + (test.status || "draft") + "'>" + getStatusLabel(test.status || "draft") + "</span></td>" +
           "<td><div class='table-actions'>" +
-            "<button type='button' class='btn btn-outline btn-small' data-test-edit='" + test.id + "'>" + t("test_btn_edit") + "</button>" +
-            "<button type='button' class='btn btn-primary btn-small' data-test-publish='" + test.id + "'>" + t("test_btn_publish") + "</button>" +
-            "<button type='button' class='btn btn-outline btn-small' data-test-close='" + test.id + "'>" + t("test_btn_close") + "</button>" +
-            "<button type='button' class='btn btn-danger btn-small' data-test-delete='" + test.id + "'>" + t("test_btn_delete") + "</button>" +
+          "<button type='button' class='btn btn-outline btn-small' data-test-edit='" + test.id + "'>" + t("test_btn_edit") + "</button>" +
+          "<button type='button' class='btn btn-primary btn-small' data-test-publish='" + test.id + "'>" + t("test_btn_publish") + "</button>" +
+          "<button type='button' class='btn btn-outline btn-small' data-test-close='" + test.id + "'>" + t("test_btn_close") + "</button>" +
+          "<button type='button' class='btn btn-danger btn-small' data-test-delete='" + test.id + "'>" + t("test_btn_delete") + "</button>" +
           "</div></td>";
         testsBody.appendChild(row);
       });
@@ -985,8 +1007,8 @@
                     text: clean(option.text)
                   };
                 }).filter(function (option) {
-                    return option.text;
-                  }),
+                  return option.text;
+                }),
                 correctOptionId: clean(question.correctOptionId).toLowerCase()
               };
             })
