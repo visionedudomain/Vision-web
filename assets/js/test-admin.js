@@ -110,6 +110,26 @@
     });
   }
 
+  function normalizeQuestionStartLine(text) {
+    return clean(text).replace(/^(q(?:uestion)?\s*)?((?:\d\s*){1,3})\s*([\)\].:-])\s*/i, function (_, prefix, digits, punctuation) {
+      return clean(prefix || "") + (prefix ? "" : "") + String(digits || "").replace(/\s+/g, "") + punctuation + " ";
+    }).replace(/^\s+/, "");
+  }
+
+  function normalizeOptionStartLine(text) {
+    return clean(text).replace(/^([A-D])\s*([\)\].:-])\s*/i, function (_, optionId, punctuation) {
+      return String(optionId).toUpperCase() + punctuation + " ";
+    }).replace(/^\s+/, "");
+  }
+
+  function normalizeImportedLine(text) {
+    return normalizeOptionStartLine(normalizeQuestionStartLine(text));
+  }
+
+  function isQuestionStartLine(text) {
+    return /^(?:q(?:uestion)?\s*)?\d{1,3}[\)\].:-]\s*/i.test(normalizeQuestionStartLine(text));
+  }
+
   function escapeHtml(value) {
     return String(value || "").replace(/[&<>"']/g, function (character) {
       return {
@@ -206,7 +226,7 @@
 
   function extractInlineOptions(text) {
     var options = [];
-    var matcher = /([A-D])[\)\].:-]\s*(.*?)(?=(?:\s+[A-D][\)\].:-]\s)|$)/gi;
+    var matcher = /([A-D])\s*[\)\].:-]\s*(.*?)(?=(?:\s+[A-D]\s*[\)\].:-]\s)|$)/gi;
     var match;
 
     while ((match = matcher.exec(String(text || "")))) {
@@ -226,10 +246,10 @@
   function extractAnswerKeyMap(lines) {
     var answerMap = {};
     (Array.isArray(lines) ? lines : []).forEach(function (line) {
-      var matcher = /(\d{1,3})\s*[\)\].:-]?\s*(?:answer\s*[:\-]?\s*)?([A-D])(?=\b)/gi;
+      var matcher = /((?:\d\s*){1,3})\s*[\)\].:-]?\s*(?:answer\s*[:\-]?\s*)?([A-D])(?=\b)/gi;
       var match;
       while ((match = matcher.exec(String(line || "")))) {
-        answerMap[String(match[1])] = String(match[2]).toLowerCase();
+        answerMap[String(match[1]).replace(/\s+/g, "")] = String(match[2]).toLowerCase();
       }
     });
     return answerMap;
@@ -270,7 +290,7 @@
   }
 
   function parseQuestionBlock(blockLines, answerMap, fallbackIndex, requireAnswer) {
-    var firstLine = clean(blockLines && blockLines[0]);
+    var firstLine = normalizeQuestionStartLine(clean(blockLines && blockLines[0]));
     var firstMatch = firstLine.match(/^(?:q(?:uestion)?\s*)?(\d{1,3})[\)\].:-]\s*(.*)$/i);
     if (!firstMatch) {
       return null;
@@ -281,7 +301,9 @@
     if (clean(firstMatch[2])) {
       lines.push(clean(firstMatch[2]));
     }
-    lines = lines.concat((Array.isArray(blockLines) ? blockLines.slice(1) : []).map(clean).filter(Boolean));
+    lines = lines.concat((Array.isArray(blockLines) ? blockLines.slice(1) : []).map(function (line) {
+      return normalizeImportedLine(clean(line));
+    }).filter(Boolean));
 
     var promptParts = [];
     var options = [];
@@ -354,7 +376,7 @@
 
   function parseQuestionsFromPdfLines(lines) {
     var normalizedLines = (Array.isArray(lines) ? lines : []).map(function (line) {
-      return clean(String(line || "").replace(/\s+/g, " "));
+      return normalizeImportedLine(clean(String(line || "").replace(/\s+/g, " ")));
     }).filter(Boolean);
     var answerSectionIndex = normalizedLines.findIndex(function (line) {
       return /^(?:answer\s*key|answers?)\b/i.test(line);
@@ -362,7 +384,11 @@
     if (answerSectionIndex < 0) {
       answerSectionIndex = normalizedLines.findIndex(function (line) {
         var matches = String(line || "").match(/(\d{1,3})\s*[\)\].:-]?\s*[A-D](?=\b)/ig);
-        return Array.isArray(matches) && matches.length >= 2;
+        if (!Array.isArray(matches) || matches.length < 2) {
+          return false;
+        }
+        var cleanLine = String(line || "").replace(/(\d{1,3})\s*[\)\].:-]?\s*[A-D](?=\b)/ig, "").replace(/[^a-z]/ig, "");
+        return cleanLine.length < 15 || matches.length >= 4;
       });
     }
     var answerMap = extractAnswerKeyMap(answerSectionIndex >= 0 ? normalizedLines.slice(answerSectionIndex) : []);
@@ -371,7 +397,7 @@
     var currentBlock = [];
 
     contentLines.forEach(function (line) {
-      if (/^(?:q(?:uestion)?\s*)?\d{1,3}[\)\].:-]\s+/i.test(line)) {
+      if (isQuestionStartLine(line)) {
         if (currentBlock.length) {
           blocks.push(currentBlock);
         }
@@ -385,9 +411,24 @@
       blocks.push(currentBlock);
     }
 
-    return blocks.map(function (block, index) {
+    var parsedQuestions = blocks.map(function (block, index) {
       return parseQuestionBlock(block, answerMap, index, false);
     }).filter(Boolean);
+
+    var byQuestionNumber = {};
+    parsedQuestions.forEach(function (question) {
+      var key = clean(question.questionNumber || question.id);
+      var existing = byQuestionNumber[key];
+      if (!existing || question.options.length > existing.options.length || clean(question.prompt).length > clean(existing.prompt).length) {
+        byQuestionNumber[key] = question;
+      }
+    });
+
+    return Object.keys(byQuestionNumber).sort(function (left, right) {
+      return Number(left) - Number(right);
+    }).map(function (key) {
+      return byQuestionNumber[key];
+    });
   }
 
   function parseAnswerKeyFromPdfLines(lines) {
