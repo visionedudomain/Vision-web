@@ -6,6 +6,7 @@
   var STUDENT_APP_NAME = "vision-test-student-app";
   var REGISTRATIONS_COLLECTION = "test_registrations";
   var STUDENTS_COLLECTION = "students";
+  var LOGIN_INDEX_COLLECTION = "student_login_index";
   var PUBLIC_TESTS_COLLECTION = "published_tests";
   var ATTEMPTS_COLLECTION = "attempts";
   var ANSWER_KEYS_COLLECTION = "test_answer_keys";
@@ -35,6 +36,10 @@
     return clean(loginNameNormalized) + "@students.visionacademy.local";
   }
 
+  function buildStudentAuthEmail(loginNameNormalized) {
+    return clean(loginNameNormalized) + "__" + Date.now() + Math.random().toString(36).slice(2, 8) + "@students.visionacademy.local";
+  }
+
   function getStudentSessionToken() {
     return localStorage.getItem(SESSION_KEY) || "";
   }
@@ -53,6 +58,12 @@
     return code === "network_error" || code === "auth/network-request-failed" || code === "unavailable" || /network|offline|unavailable/.test(message);
   }
 
+  function isPermissionError(error) {
+    var code = clean(error && error.code).toLowerCase();
+    var message = clean(error && error.message).toLowerCase();
+    return code === "permission-denied" || /missing or insufficient permissions/.test(message);
+  }
+
   function createError(message, code, cause) {
     var error = new Error(message);
     error.code = code || "";
@@ -66,6 +77,11 @@
     return ["apiKey", "authDomain", "projectId", "messagingSenderId", "appId"].every(function (key) {
       return clean(config && config[key]);
     });
+  }
+
+  function createErrorFromPayload(payload, fallback) {
+    var body = payload && typeof payload === "object" ? payload : {};
+    return createError(clean(body.error && body.error.message) || clean(body.message) || clean(body.error) || fallback || "Request failed.");
   }
 
   function getFirebaseModuleUrl(fileName) {
@@ -105,6 +121,61 @@
     };
 
     return studentState.api;
+  }
+
+  async function requestIdentityToolkit(endpoint, body) {
+    var apiKey = clean((window.VisionFirebaseConfig || {}).apiKey);
+    if (!apiKey) {
+      throw createError("Firebase apiKey is missing in assets/js/firebase-config.js.", "CONFIG_MISSING");
+    }
+    var response = await fetch("https://identitytoolkit.googleapis.com/v1/" + endpoint + "?key=" + encodeURIComponent(apiKey), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body || {})
+    });
+    var payload = {};
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = {};
+    }
+    if (!response.ok) {
+      throw createErrorFromPayload(payload, "Unable to complete student login setup right now.");
+    }
+    return payload;
+  }
+
+  async function provisionStudentAuthAccount(loginNameNormalized, password) {
+    var authEmail = buildStudentAuthEmail(loginNameNormalized);
+    var payload = await requestIdentityToolkit("accounts:signUp", {
+      email: authEmail,
+      password: password,
+      returnSecureToken: true
+    });
+    var authUid = clean(payload.localId);
+    if (!authUid) {
+      throw createError("Unable to create the student login account.", "AUTH_CREATE_FAILED");
+    }
+    return {
+      authUid: authUid,
+      authEmail: authEmail,
+      cleanupToken: clean(payload.idToken)
+    };
+  }
+
+  async function deleteStudentAuthAccount(idToken) {
+    if (!clean(idToken)) {
+      return;
+    }
+    try {
+      await requestIdentityToolkit("accounts:delete", {
+        idToken: clean(idToken)
+      });
+    } catch (error) {
+      console.warn("Unable to clean up student auth account", error);
+    }
   }
 
   async function ensureStudentFirebase() {
@@ -284,6 +355,35 @@
     return studentState.api.getDoc(studentState.api.doc(studentState.db, STUDENTS_COLLECTION, clean(uid)));
   }
 
+  async function getAttemptSnapshot(studentId, testId) {
+    await ensureStudentFirebase();
+    var snapshot = await studentState.api.getDocs(studentState.api.query(
+      studentState.api.collection(studentState.db, ATTEMPTS_COLLECTION),
+      studentState.api.where("studentId", "==", clean(studentId)),
+      studentState.api.where("testId", "==", clean(testId)),
+      studentState.api.limit(1)
+    ));
+    return snapshot.empty ? null : snapshot.docs[0];
+  }
+
+  async function getStudentAuthEmail(loginNameNormalized) {
+    await ensureStudentFirebase();
+    try {
+      var loginIndexSnapshot = await studentState.api.getDoc(studentState.api.doc(studentState.db, LOGIN_INDEX_COLLECTION, clean(loginNameNormalized)));
+      if (loginIndexSnapshot.exists()) {
+        var authEmail = clean((loginIndexSnapshot.data() || {}).authEmail);
+        if (authEmail) {
+          return authEmail;
+        }
+      }
+    } catch (error) {
+      if (clean(error && error.code) !== "permission-denied") {
+        console.warn("Student login index lookup failed", error);
+      }
+    }
+    return pseudoStudentEmail(loginNameNormalized);
+  }
+
   async function getStudentSession() {
     await ensureStudentFirebase();
     if (!studentState.currentUser) {
@@ -339,7 +439,7 @@
     }
 
     try {
-      await studentState.api.signInWithEmailAndPassword(studentState.auth, pseudoStudentEmail(loginNameNormalized), safePassword);
+      await studentState.api.signInWithEmailAndPassword(studentState.auth, await getStudentAuthEmail(loginNameNormalized), safePassword);
       setStudentSessionToken(studentState.auth.currentUser && studentState.auth.currentUser.uid ? studentState.auth.currentUser.uid : "1");
       return getStudentSession();
     } catch (error) {
@@ -370,29 +470,36 @@
     var displayName = clean(safe.displayName);
     var loginName = clean(safe.loginName);
     var loginNameNormalized = normalizeLoginName(loginName);
+    var password = clean(safe.password);
     var mobile = clean(safe.mobile);
     var language = normalizeLanguage(safe.language);
     var batchName = clean(safe.batchName);
-    var examName = clean(safe.examName);
 
-    if (!displayName || !loginNameNormalized || !mobile) {
-      throw createError("Name, login name, and mobile number are required.", "REGISTRATION_INVALID");
+    if (!displayName || !loginNameNormalized || !mobile || !password) {
+      throw createError("Name, login name, mobile number, and password are required.", "REGISTRATION_INVALID");
+    }
+    if (password.length < 6) {
+      throw createError("Password must be at least 6 characters.", "REGISTRATION_PASSWORD_SHORT");
     }
 
+    var provisionedAccount = await provisionStudentAuthAccount(loginNameNormalized, password);
+    var now = new Date().toISOString();
     try {
       await studentState.api.setDoc(studentState.api.doc(studentState.db, REGISTRATIONS_COLLECTION, loginNameNormalized), {
         displayName: displayName,
         loginName: loginName,
         loginNameNormalized: loginNameNormalized,
+        authUid: provisionedAccount.authUid,
+        authEmail: provisionedAccount.authEmail,
         mobile: mobile,
         language: language,
         batchName: batchName,
-        examName: examName,
         status: "pending",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: now,
+        updatedAt: now
       });
     } catch (error) {
+      await deleteStudentAuthAccount(provisionedAccount.cleanupToken);
       if (clean(error && error.code) === "permission-denied") {
         throw createError("This login name is already registered or approved for a student.", "REGISTRATION_CONFLICT", error);
       }
@@ -408,7 +515,19 @@
 
   async function getActiveTest() {
     var sessionPayload = await getStudentSession();
-    var activeTestSnapshot = await getActivePublicTestSnapshot();
+    var activeTestSnapshot;
+    try {
+      activeTestSnapshot = await getActivePublicTestSnapshot();
+    } catch (error) {
+      if (isPermissionError(error)) {
+        throw createError(
+          window.VisionTestI18n ? window.VisionTestI18n.t("test_portal_access_blocked", "Your login worked, but the test data is blocked by Firestore permissions. Publish the latest Firestore rules and republish the test.") : "Your login worked, but the test data is blocked by Firestore permissions. Publish the latest Firestore rules and republish the test.",
+          "TEST_ACCESS_BLOCKED",
+          error
+        );
+      }
+      throw error;
+    }
     if (!activeTestSnapshot) {
       return {
         ok: true,
@@ -423,9 +542,22 @@
     var opensAt = Number(publicTest.opensAtMs || new Date(publicTest.opensAt).getTime());
     var closesAt = Number(publicTest.closesAtMs || new Date(publicTest.closesAt).getTime());
     var attemptRef = studentState.api.doc(studentState.db, ATTEMPTS_COLLECTION, getAttemptDocumentId(sessionPayload.student.id, publicTest.id));
-    var attemptSnapshot = await studentState.api.getDoc(attemptRef);
+    var attemptSnapshot;
 
-    if (attemptSnapshot.exists()) {
+    try {
+      attemptSnapshot = await getAttemptSnapshot(sessionPayload.student.id, publicTest.id);
+    } catch (error) {
+      if (isPermissionError(error)) {
+        throw createError(
+          window.VisionTestI18n ? window.VisionTestI18n.t("test_portal_access_blocked", "Your login worked, but the test data is blocked by Firestore permissions. Publish the latest Firestore rules and republish the test.") : "Your login worked, but the test data is blocked by Firestore permissions. Publish the latest Firestore rules and republish the test.",
+          "TEST_ACCESS_BLOCKED",
+          error
+        );
+      }
+      throw error;
+    }
+
+    if (attemptSnapshot && attemptSnapshot.exists()) {
       var attempt = mapAttemptDocument(attemptSnapshot);
       if (attempt.status !== "started") {
         return {
@@ -614,6 +746,7 @@
     getStudentSessionToken: getStudentSessionToken,
     setStudentSessionToken: setStudentSessionToken,
     isNetworkError: isNetworkError,
+    isPermissionError: isPermissionError,
     registerStudent: registerStudent,
     approveStudent: async function (payload) {
       var store = await requireAdminStore();
@@ -623,8 +756,10 @@
       var store = await requireAdminStore();
       return store.bulkApproveStudents(rows);
     },
-    resetStudentPassword: function () {
-      throw new Error("Password reset is not available in Firebase-only mode.");
+    resetStudentPassword: async function (payload) {
+      var store = await requireAdminStore();
+      var safe = payload && typeof payload === "object" ? payload : {};
+      return store.resetStudentPassword(clean(safe.studentId), clean(safe.password));
     },
     studentLogin: studentLogin,
     logoutStudent: logoutStudent,

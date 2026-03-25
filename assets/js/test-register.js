@@ -37,13 +37,13 @@
       var payload = {
         displayName: clean(form.elements.displayName.value),
         loginName: clean(form.elements.loginName.value),
+        password: clean(form.elements.password.value),
         mobile: clean(form.elements.mobile.value),
         language: clean(form.elements.language.value),
-        batchName: clean(form.elements.batchName.value),
-        examName: clean(form.elements.examName.value)
+        batchName: clean(form.elements.batchName.value)
       };
 
-      if (!payload.displayName || !payload.loginName || !payload.mobile) {
+      if (!payload.displayName || !payload.loginName || !payload.password || !payload.mobile) {
         setStatus(t("status_fill_required", "Please fill all required fields."), true);
         return;
       }

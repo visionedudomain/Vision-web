@@ -6,6 +6,7 @@
   var STUDENTS_COLLECTION = "students";
   var TESTS_COLLECTION = "tests";
   var ATTEMPTS_COLLECTION = "attempts";
+  var LOGIN_INDEX_COLLECTION = "student_login_index";
   var PUBLIC_TESTS_COLLECTION = "published_tests";
   var ANSWER_KEYS_COLLECTION = "test_answer_keys";
 
@@ -47,6 +48,11 @@
 
   function normalizeLanguage(value) {
     return clean(value).toLowerCase() === "ta" || clean(value).toLowerCase() === "tamil" ? "ta" : "en";
+  }
+
+  function normalizeStatus(value, fallback) {
+    var normalized = clean(value).toLowerCase();
+    return normalized || clean(fallback).toLowerCase();
   }
 
   function normalizeLoginName(value) {
@@ -189,11 +195,14 @@
       displayName: clean(data.displayName),
       loginName: clean(data.loginName),
       loginNameNormalized: clean(data.loginNameNormalized),
+      authUid: clean(data.authUid),
+      authEmail: clean(data.authEmail),
       mobile: clean(data.mobile),
       language: normalizeLanguage(data.language),
       batchName: clean(data.batchName),
       examName: clean(data.examName),
-      status: clean(data.status) || "pending",
+      status: normalizeStatus(data.status, "pending"),
+      studentId: clean(data.studentId),
       createdAt: data.createdAt || "",
       updatedAt: data.updatedAt || "",
       approvedAt: data.approvedAt || ""
@@ -214,7 +223,7 @@
       language: normalizeLanguage(data.language),
       batchName: clean(data.batchName),
       examName: clean(data.examName),
-      status: clean(data.status) || "approved",
+      status: normalizeStatus(data.status, "approved"),
       updatedAt: data.updatedAt || "",
       passwordUpdatedAt: data.passwordUpdatedAt || "",
       approvedAt: data.approvedAt || ""
@@ -293,6 +302,10 @@
     return clean(loginNameNormalized) + "@students.visionacademy.local";
   }
 
+  function buildStudentAuthEmail(loginNameNormalized) {
+    return clean(loginNameNormalized) + "__" + Date.now() + Math.random().toString(36).slice(2, 8) + "@students.visionacademy.local";
+  }
+
   function generateTempPassword() {
     return "Vision" + Math.random().toString(36).slice(2, 6).toUpperCase() + Math.random().toString(10).slice(2, 6);
   }
@@ -329,6 +342,53 @@
     return payload;
   }
 
+  async function provisionStudentAuthAccount(loginNameNormalized, password) {
+    var authEmail = buildStudentAuthEmail(loginNameNormalized);
+    var payload = await requestIdentityToolkit("accounts:signUp", {
+      email: authEmail,
+      password: password,
+      returnSecureToken: true
+    });
+    var authUid = clean(payload.localId);
+    if (!authUid) {
+      throw new Error("Unable to create the student login account.");
+    }
+    return {
+      authUid: authUid,
+      authEmail: authEmail,
+      cleanupToken: clean(payload.idToken)
+    };
+  }
+
+  async function deleteStudentAuthAccount(idToken) {
+    if (!clean(idToken)) {
+      return;
+    }
+    try {
+      await requestIdentityToolkit("accounts:delete", {
+        idToken: clean(idToken)
+      });
+    } catch (error) {
+      console.warn("Unable to clean up student auth account", error);
+    }
+  }
+
+  function buildLoginIndexPayload(authEmail, updatedAt) {
+    return {
+      authEmail: clean(authEmail),
+      updatedAt: clean(updatedAt) || new Date().toISOString()
+    };
+  }
+
+  async function findExistingStudentByLoginName(loginNameNormalized) {
+    var snapshot = await state.api.getDocs(state.api.query(
+      state.api.collection(state.db, STUDENTS_COLLECTION),
+      state.api.where("loginNameNormalized", "==", clean(loginNameNormalized)),
+      state.api.limit(1)
+    ));
+    return snapshot.empty ? null : snapshot.docs[0];
+  }
+
   function enrichAttempt(attempt) {
     var safe = attempt && typeof attempt === "object" ? attempt : {};
     var test = currentTests.find(function (item) {
@@ -352,7 +412,7 @@
       opensAt: clean(data.opensAt),
       closesAt: clean(data.closesAt),
       durationMinutes: Number(data.durationMinutes || 0),
-      status: clean(data.status) || "draft",
+      status: normalizeStatus(data.status, "draft"),
       isActive: Boolean(data.isActive),
       questionCount: Number(data.questionCount || (Array.isArray(data.questions) ? data.questions.length : 0)),
       questions: (Array.isArray(data.questions) ? data.questions : []).map(mapQuestion).filter(function (question) {
@@ -381,8 +441,16 @@
       correctCount: Number(data.correctCount || 0),
       answeredCount: Number(data.answeredCount || 0),
       totalQuestions: Number(data.totalQuestions || 0),
-      status: clean(data.status) || "started"
+      status: normalizeStatus(data.status, "started")
     };
+  }
+
+  function sortRegistrations(items) {
+    return items.slice().sort(function (left, right) {
+      var leftTime = toTimeMillis(left.updatedAt || left.createdAt || left.approvedAt);
+      var rightTime = toTimeMillis(right.updatedAt || right.createdAt || right.approvedAt);
+      return rightTime - leftTime;
+    });
   }
 
   function stopSubscriptions() {
@@ -419,9 +487,9 @@
     }
     if (!state.unsubscribeRegistrations) {
       state.unsubscribeRegistrations = state.api.onSnapshot(
-        state.api.query(state.api.collection(state.db, REGISTRATIONS_COLLECTION), state.api.orderBy("createdAt", "desc")),
+        state.api.collection(state.db, REGISTRATIONS_COLLECTION),
         function (snapshot) {
-          currentRegistrations = snapshot.docs.map(mapRegistrationDocument);
+          currentRegistrations = sortRegistrations(snapshot.docs.map(mapRegistrationDocument));
           emit("registrations", getRegistrations());
         },
         function (error) {
@@ -678,6 +746,95 @@
     }, { merge: true });
   }
 
+  async function resetStudentPassword(studentId, nextPassword) {
+    await readyPromise;
+    assertConfigured();
+    assertAdminSession();
+    var targetId = clean(studentId);
+    var password = clean(nextPassword);
+    if (!targetId) {
+      throw new Error("Student record not found.");
+    }
+    if (password.length < 6) {
+      throw new Error("Password must be at least 6 characters.");
+    }
+
+    var studentRef = state.api.doc(state.db, STUDENTS_COLLECTION, targetId);
+    var studentSnapshot = await state.api.getDoc(studentRef);
+    if (!studentSnapshot.exists()) {
+      throw new Error("Student record not found.");
+    }
+
+    var student = mapStudentDocument(studentSnapshot);
+    if (!student.loginNameNormalized) {
+      throw new Error("Student login name is invalid.");
+    }
+
+    var provisionedAccount = await provisionStudentAuthAccount(student.loginNameNormalized, password);
+    var now = new Date().toISOString();
+
+    try {
+      var resetBatch = state.api.writeBatch(state.db);
+      resetBatch.set(studentRef, {
+        authUid: provisionedAccount.authUid,
+        authEmail: provisionedAccount.authEmail,
+        passwordUpdatedAt: now,
+        updatedAt: now
+      }, { merge: true });
+      resetBatch.set(state.api.doc(state.db, LOGIN_INDEX_COLLECTION, student.loginNameNormalized), buildLoginIndexPayload(provisionedAccount.authEmail, now), { merge: true });
+      if (student.registrationId) {
+        resetBatch.set(state.api.doc(state.db, REGISTRATIONS_COLLECTION, student.registrationId), {
+          authUid: provisionedAccount.authUid,
+          authEmail: provisionedAccount.authEmail,
+          updatedAt: now
+        }, { merge: true });
+      }
+      await resetBatch.commit();
+    } catch (error) {
+      await deleteStudentAuthAccount(provisionedAccount.cleanupToken);
+      throw error;
+    }
+
+    return {
+      ok: true,
+      studentId: targetId,
+      passwordUpdatedAt: now
+    };
+  }
+
+  async function clearAttempts() {
+    await readyPromise;
+    assertConfigured();
+    assertAdminSession();
+    var deletedCount = 0;
+
+    while (true) {
+      var attemptsSnapshot = await state.api.getDocs(state.api.query(
+        state.api.collection(state.db, ATTEMPTS_COLLECTION),
+        state.api.limit(200)
+      ));
+      if (attemptsSnapshot.empty) {
+        break;
+      }
+
+      var clearBatch = state.api.writeBatch(state.db);
+      attemptsSnapshot.docs.forEach(function (docSnapshot) {
+        clearBatch.delete(docSnapshot.ref);
+      });
+      await clearBatch.commit();
+      deletedCount += attemptsSnapshot.docs.length;
+
+      if (attemptsSnapshot.docs.length < 200) {
+        break;
+      }
+    }
+
+    return {
+      ok: true,
+      count: deletedCount
+    };
+  }
+
   async function approveStudent(payload) {
     await readyPromise;
     assertConfigured();
@@ -698,60 +855,61 @@
     if (!loginNameNormalized) {
       throw new Error("Student login name is invalid.");
     }
-    var existingStudentsSnapshot = await state.api.getDocs(state.api.query(
-      state.api.collection(state.db, STUDENTS_COLLECTION),
-      state.api.where("loginNameNormalized", "==", loginNameNormalized),
-      state.api.limit(1)
-    ));
-    var legacyStudentSnapshot = existingStudentsSnapshot.empty ? null : existingStudentsSnapshot.docs[0];
-    if (legacyStudentSnapshot && (clean((legacyStudentSnapshot.data() || {}).authUid) || clean((legacyStudentSnapshot.data() || {}).authEmail))) {
-      throw new Error("This login name is already approved for a student.");
+    var registrationStudentId = clean(registration.studentId);
+    var existingStudentSnapshot = await findExistingStudentByLoginName(loginNameNormalized);
+    if (existingStudentSnapshot && existingStudentSnapshot.id !== registrationStudentId) {
+      var existingStudentData = existingStudentSnapshot.data() || {};
+      if (clean(existingStudentData.authUid) || clean(existingStudentData.authEmail)) {
+        throw new Error("This login name is already approved for a student.");
+      }
     }
 
     var tempPassword = clean(safe.tempPassword);
     if (tempPassword && tempPassword.length < 6) {
-      throw new Error("Temporary password must be at least 6 characters.");
-    }
-    if (!tempPassword) {
-      tempPassword = generateTempPassword();
+      throw new Error("Password must be at least 6 characters.");
     }
 
-    var authPayload = await requestIdentityToolkit("accounts:signUp", {
-      email: pseudoStudentEmail(loginNameNormalized),
-      password: tempPassword,
-      returnSecureToken: false
-    });
-    var studentId = clean(authPayload.localId);
-    if (!studentId) {
-      throw new Error("Unable to create the student login account.");
+    var shouldReuseRegistrationAuth = !tempPassword && clean(registration.authUid) && clean(registration.authEmail);
+    var provisionedAccount = null;
+    if (shouldReuseRegistrationAuth) {
+      provisionedAccount = {
+        authUid: clean(registration.authUid),
+        authEmail: clean(registration.authEmail),
+        cleanupToken: ""
+      };
+    } else {
+      if (!tempPassword) {
+        tempPassword = generateTempPassword();
+      }
+      provisionedAccount = await provisionStudentAuthAccount(loginNameNormalized, tempPassword);
     }
+    var studentId = clean(provisionedAccount.authUid);
+    var authEmail = clean(provisionedAccount.authEmail);
 
     var now = new Date().toISOString();
-    await state.api.setDoc(state.api.doc(state.db, STUDENTS_COLLECTION, studentId), {
+    var studentStatus = clean(safe.status || "approved") === "inactive" ? "inactive" : "approved";
+    var studentPayload = {
       authUid: studentId,
       registrationId: registration.id,
       displayName: clean(safe.displayName || registration.displayName),
       loginName: loginName,
       loginNameNormalized: loginNameNormalized,
-      authEmail: pseudoStudentEmail(loginNameNormalized),
+      authEmail: authEmail,
       mobile: clean(safe.mobile || registration.mobile),
       language: normalizeLanguage(safe.language || registration.language),
       batchName: clean(safe.batchName || registration.batchName),
       examName: clean(safe.examName || registration.examName),
-      status: clean(safe.status || "approved") === "inactive" ? "inactive" : "approved",
+      status: studentStatus,
       approvedAt: now,
       passwordUpdatedAt: now,
       updatedAt: now
-    }, { merge: true });
-
-    if (legacyStudentSnapshot && legacyStudentSnapshot.id !== studentId) {
-      await state.api.deleteDoc(state.api.doc(state.db, STUDENTS_COLLECTION, legacyStudentSnapshot.id));
-    }
-
-    await state.api.setDoc(registrationRef, {
+    };
+    var registrationPayload = {
       displayName: clean(safe.displayName || registration.displayName),
       loginName: loginName,
       loginNameNormalized: loginNameNormalized,
+      authUid: studentId,
+      authEmail: authEmail,
       mobile: clean(safe.mobile || registration.mobile),
       language: normalizeLanguage(safe.language || registration.language),
       batchName: clean(safe.batchName || registration.batchName),
@@ -760,13 +918,32 @@
       approvedAt: now,
       updatedAt: now,
       studentId: studentId
-    }, { merge: true });
+    };
+
+    try {
+      var approvalBatch = state.api.writeBatch(state.db);
+      approvalBatch.set(state.api.doc(state.db, STUDENTS_COLLECTION, studentId), studentPayload, { merge: true });
+      approvalBatch.set(registrationRef, registrationPayload, { merge: true });
+      approvalBatch.set(state.api.doc(state.db, LOGIN_INDEX_COLLECTION, loginNameNormalized), buildLoginIndexPayload(authEmail, now), { merge: true });
+      if (registration.loginNameNormalized && registration.loginNameNormalized !== loginNameNormalized) {
+        approvalBatch.delete(state.api.doc(state.db, LOGIN_INDEX_COLLECTION, registration.loginNameNormalized));
+      }
+      if (existingStudentSnapshot && existingStudentSnapshot.id !== studentId) {
+        approvalBatch.delete(state.api.doc(state.db, STUDENTS_COLLECTION, existingStudentSnapshot.id));
+      }
+      await approvalBatch.commit();
+    } catch (error) {
+      if (provisionedAccount && provisionedAccount.cleanupToken) {
+        await deleteStudentAuthAccount(provisionedAccount.cleanupToken);
+      }
+      throw error;
+    }
 
     return {
       ok: true,
       studentId: studentId,
       loginName: loginName,
-      tempPassword: tempPassword
+      tempPassword: shouldReuseRegistrationAuth ? "" : tempPassword
     };
   }
 
@@ -776,6 +953,7 @@
     assertAdminSession();
     var items = Array.isArray(rows) ? rows : [];
     var credentials = [];
+    var approvedCount = 0;
     for (var index = 0; index < items.length; index += 1) {
       var row = items[index] && typeof items[index] === "object" ? items[index] : {};
       var loginName = clean(row.loginName);
@@ -800,18 +978,20 @@
         loginName: loginName,
         language: clean(row.language),
         batchName: clean(row.batchName),
-        examName: clean(row.examName),
         status: clean(row.status || "approved"),
         tempPassword: clean(row.tempPassword || row.password)
       });
-      credentials.push({
-        loginName: result.loginName,
-        tempPassword: result.tempPassword
-      });
+      approvedCount += 1;
+      if (clean(result.tempPassword)) {
+        credentials.push({
+          loginName: result.loginName,
+          tempPassword: result.tempPassword
+        });
+      }
     }
     return {
       ok: true,
-      count: credentials.length,
+      count: approvedCount,
       credentials: credentials
     };
   }
@@ -840,6 +1020,8 @@
     approveStudent: approveStudent,
     bulkApproveStudents: bulkApproveStudents,
     updateStudentStatus: updateStudentStatus,
+    resetStudentPassword: resetStudentPassword,
+    clearAttempts: clearAttempts,
     getAdminIdToken: getAdminIdToken,
     normalizeLoginName: normalizeLoginName,
     formatDateTime: formatDateTime

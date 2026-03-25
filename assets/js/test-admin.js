@@ -918,6 +918,7 @@
     var approvalCsvInput = byId("approvalCsvInput");
     var downloadApprovalTemplateButton = byId("downloadApprovalTemplate");
     var exportResultsButton = byId("exportTestResults");
+    var clearResultsButton = byId("clearTestResults");
     var studentApprovalForm = byId("studentApprovalForm");
     var testBuilderForm = byId("testBuilderForm");
     var resetBuilderButton = byId("resetTestBuilder");
@@ -941,6 +942,12 @@
       }).length;
     }
 
+    function registrationNeedsApproval(registration) {
+      var safe = registration && typeof registration === "object" ? registration : {};
+      var status = clean(safe.status).toLowerCase() || "pending";
+      return !clean(safe.studentId) && status !== "inactive";
+    }
+
     function populateRegistrationSelect() {
       var select = studentApprovalForm ? studentApprovalForm.elements.registrationId : null;
       if (!select) {
@@ -950,7 +957,7 @@
       select.innerHTML = "";
       select.appendChild(new Option(t("test_select_registration"), ""));
       registrations.filter(function (registration) {
-        return registration.status === "pending";
+        return registrationNeedsApproval(registration);
       }).forEach(function (registration) {
         select.appendChild(new Option(registration.displayName + " - " + registration.loginName, registration.id));
       });
@@ -963,7 +970,7 @@
       }
       registrationsBody.innerHTML = "";
       if (!registrations.length) {
-        registrationsBody.innerHTML = "<tr><td colspan='7'>" + t("test_students_empty") + "</td></tr>";
+        registrationsBody.innerHTML = "<tr><td colspan='6'>" + t("test_students_empty") + "</td></tr>";
         return;
       }
       registrations.forEach(function (registration) {
@@ -973,10 +980,9 @@
           "<td>" + (registration.loginName || "-") + "</td>" +
           "<td>" + (registration.mobile || "-") + "</td>" +
           "<td>" + (registration.batchName || "-") + "</td>" +
-          "<td>" + (registration.examName || "-") + "</td>" +
           "<td><span class='status-pill status-pill-" + (registration.status || "draft") + "'>" + getStatusLabel(registration.status || "pending") + "</span></td>" +
           "<td><div class='table-actions'>" +
-          (registration.status === "pending"
+          (registrationNeedsApproval(registration)
             ? "<button type='button' class='btn btn-primary btn-small' data-approve-registration='" + registration.id + "'>" + t("test_btn_approve_student") + "</button>"
             : "<span class='table-subtext'>" + window.VisionTestStore.formatDateTime(registration.approvedAt || registration.updatedAt || registration.createdAt) + "</span>") +
           "</div></td>";
@@ -1003,8 +1009,9 @@
           "<td>" + (student.language === "ta" ? t("test_language_tamil") : t("test_language_english")) + "</td>" +
           "<td><span class='status-pill status-pill-" + (student.status || "draft") + "'>" + getStatusLabel(student.status || "approved") + "</span></td>" +
           "<td><div class='table-actions'>" +
+          "<button type='button' class='btn btn-outline btn-small' data-reset-student-password='" + student.id + "'>" + t("test_btn_reset_password") + "</button>" +
           "<button type='button' class='btn " + (student.status === "inactive" ? "btn-primary" : "btn-danger") + " btn-small' data-update-student-status='" + student.id + "' data-next-status='" + (student.status === "inactive" ? "approved" : "inactive") + "'>" + (student.status === "inactive" ? t("test_btn_activate") : t("test_btn_deactivate")) + "</button>" +
-          "</div></td>";
+          "</div><span class='table-subtext'>" + t("test_th_password_updated") + ": " + window.VisionTestStore.formatDateTime(student.passwordUpdatedAt || student.approvedAt || student.updatedAt) + "</span></td>";
         studentsBody.appendChild(row);
       });
     }
@@ -1109,7 +1116,6 @@
       }
       studentApprovalForm.elements.language.value = registration.language || "en";
       studentApprovalForm.elements.batchName.value = registration.batchName || "";
-      studentApprovalForm.elements.examName.value = registration.examName || "";
     }
 
     function resetBuilder() {
@@ -1201,11 +1207,10 @@
             loginName: clean(studentApprovalForm.elements.loginName.value),
             tempPassword: clean(studentApprovalForm.elements.tempPassword.value),
             language: clean(studentApprovalForm.elements.language.value),
-            batchName: clean(studentApprovalForm.elements.batchName.value),
-            examName: clean(studentApprovalForm.elements.examName.value)
+            batchName: clean(studentApprovalForm.elements.batchName.value)
           });
           studentApprovalForm.reset();
-          setStatus("testRegistrationsStatus", t("test_status_student_approved") + (approvalResult && approvalResult.tempPassword ? " " + t("test_label_temp_password") + ": " + approvalResult.tempPassword : ""), false);
+          setStatus("testRegistrationsStatus", t("test_status_student_approved") + (approvalResult && approvalResult.tempPassword ? " " + t("test_label_password") + ": " + approvalResult.tempPassword : ""), false);
         } catch (error) {
           setStatus("testRegistrationsStatus", error && error.message ? error.message : "Unable to approve student.", true);
         }
@@ -1225,7 +1230,7 @@
           var quickApproval = await window.VisionTestApi.approveStudent({
             registrationId: selectedRegistrationId
           });
-          setStatus("testRegistrationsStatus", t("test_status_student_approved") + (quickApproval && quickApproval.tempPassword ? " " + t("test_label_temp_password") + ": " + quickApproval.tempPassword : ""), false);
+          setStatus("testRegistrationsStatus", t("test_status_student_approved") + (quickApproval && quickApproval.tempPassword ? " " + t("test_label_password") + ": " + quickApproval.tempPassword : ""), false);
         } catch (error) {
           setStatus("testRegistrationsStatus", error && error.message ? error.message : "Unable to approve registration.", true);
         }
@@ -1234,7 +1239,28 @@
 
     if (studentsBody) {
       studentsBody.addEventListener("click", async function (event) {
+        var resetPasswordButton = event.target.closest("button[data-reset-student-password]");
         var statusButton = event.target.closest("button[data-update-student-status]");
+        if (resetPasswordButton) {
+          var nextPassword = clean(window.prompt(t("test_prompt_new_password"), ""));
+          if (!nextPassword) {
+            return;
+          }
+          if (nextPassword.length < 6) {
+            setStatus("testStudentsStatus", t("test_error_password_short"), true);
+            return;
+          }
+          try {
+            await window.VisionTestApi.resetStudentPassword({
+              studentId: resetPasswordButton.getAttribute("data-reset-student-password"),
+              password: nextPassword
+            });
+            setStatus("testStudentsStatus", t("test_status_password_reset"), false);
+          } catch (error) {
+            setStatus("testStudentsStatus", error && error.message ? error.message : "Unable to reset student password.", true);
+          }
+          return;
+        }
         if (statusButton) {
           var nextStatus = statusButton.getAttribute("data-next-status");
           var confirmMessage = nextStatus === "inactive" ? t("test_prompt_confirm_deactivate") : t("test_prompt_confirm_activate");
@@ -1257,14 +1283,13 @@
           setStatus("testRegistrationsStatus", t("test_students_empty"), true);
           return;
         }
-        var headers = ["displayName", "loginName", "mobile", "batchName", "examName", "language", "status", "createdAt"];
+        var headers = ["displayName", "loginName", "mobile", "batchName", "language", "status", "createdAt"];
         var rows = registrations.map(function (registration) {
           return [
             registration.displayName,
             registration.loginName,
             registration.mobile,
             registration.batchName,
-            registration.examName,
             registration.language,
             registration.status,
             registration.createdAt
@@ -1281,8 +1306,8 @@
     if (downloadApprovalTemplateButton) {
       downloadApprovalTemplateButton.addEventListener("click", function () {
         var template = [
-          "loginName,status,language,batchName,examName",
-          "student-login,approved,en,morning,LDC 2026"
+          "loginName,status,language,batchName",
+          "student-login,approved,en,morning"
         ].join("\n");
         downloadTextFile("vision-test-approval-template.csv", template, "text/csv;charset=utf-8");
       });
@@ -1306,15 +1331,14 @@
               loginName: row[header.indexOf("loginName")],
               status: row[header.indexOf("status")],
               language: row[header.indexOf("language")],
-              batchName: row[header.indexOf("batchName")],
-              examName: row[header.indexOf("examName")]
+              batchName: row[header.indexOf("batchName")]
             };
           }).filter(function (row) {
             return clean(row.loginName);
           });
           var result = await window.VisionTestApi.bulkApproveStudents(dataRows);
           if (result && Array.isArray(result.credentials) && result.credentials.length) {
-            var credentialsCsv = ["loginName,tempPassword"].concat(result.credentials.map(function (item) {
+            var credentialsCsv = ["loginName,password"].concat(result.credentials.map(function (item) {
               return [csvCell(item.loginName), csvCell(item.tempPassword)].join(",");
             })).join("\n");
             downloadTextFile("vision-test-approved-student-passwords.csv", credentialsCsv, "text/csv;charset=utf-8");
@@ -1519,6 +1543,26 @@
         })).join("\n");
         downloadTextFile("vision-test-results.csv", csv, "text/csv;charset=utf-8");
         setStatus("testResultsStatus", t("test_status_results_exported"), false);
+      });
+    }
+
+    if (clearResultsButton) {
+      clearResultsButton.addEventListener("click", async function () {
+        if (!attempts.length) {
+          setStatus("testResultsStatus", t("test_results_empty"), true);
+          return;
+        }
+        if (!window.confirm(t("test_prompt_confirm_clear_results"))) {
+          return;
+        }
+        try {
+          var clearResult = await window.VisionTestStore.clearAttempts();
+          setStatus("testResultsStatus", replaceTokens(t("test_status_results_cleared"), {
+            count: String(Number(clearResult && clearResult.count || 0))
+          }), false);
+        } catch (error) {
+          setStatus("testResultsStatus", error && error.message ? error.message : "Unable to clear test results.", true);
+        }
       });
     }
 

@@ -68,6 +68,11 @@
     }
   }
 
+  function setStudentWelcome(student) {
+    var safe = student && typeof student === "object" ? student : {};
+    setText("studentWelcomeName", safe.displayName || safe.loginName || t("test_portal_student_fallback", "Student"));
+  }
+
   function formatMinutes(value) {
     return String(value || 0) + " " + t("test_unit_minutes", "min");
   }
@@ -172,7 +177,7 @@
   }
 
   function renderTestCard(payload) {
-    setText("studentWelcomeName", payload.student && (payload.student.displayName || payload.student.loginName || ""));
+    setStudentWelcome(payload.student);
     setText("testCardTitle", payload.test ? payload.test.title : "-");
     setText("testCardWindow", payload.test ? (formatDateTime(payload.test.opensAt) + " - " + formatDateTime(payload.test.closesAt)) : "-");
     setText("testCardLanguage", payload.test ? (payload.test.language === "ta" ? t("test_language_tamil") : t("test_language_english")) : "-");
@@ -349,8 +354,9 @@
       loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         try {
-          await window.VisionTestApi.studentLogin(clean(loginForm.elements.loginName.value), clean(loginForm.elements.password.value));
+          var sessionPayload = await window.VisionTestApi.studentLogin(clean(loginForm.elements.loginName.value), clean(loginForm.elements.password.value));
           loginForm.reset();
+          setStudentWelcome(sessionPayload && sessionPayload.student);
           setSessionVisible(true);
           await refreshPortal();
         } catch (error) {
@@ -429,9 +435,14 @@
     }
 
     try {
-      await window.VisionTestApi.getStudentSession();
+      var existingSession = await window.VisionTestApi.getStudentSession();
+      setStudentWelcome(existingSession && existingSession.student);
       setSessionVisible(true);
-      await refreshPortal();
+      try {
+        await refreshPortal();
+      } catch (refreshError) {
+        setStatus(refreshError && refreshError.message ? refreshError.message : t("test_status_backend_missing"), true);
+      }
     } catch (error) {
       if (window.VisionTestApi.getStudentSessionToken()) {
         try {

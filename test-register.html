@@ -35,7 +35,7 @@
         <p data-test-i18n="test_registration_intro">Fill this form to register for the paid online test batch. Approval is completed by the academy after offline payment verification.</p>
         <ul class="simple-list">
           <li data-test-i18n="test_registration_rule_payment">Offline payment verification is handled outside the website.</li>
-          <li data-test-i18n="test_registration_rule_credentials">After approval, Vision Academy will share the login password for the student test portal.</li>
+          <li data-test-i18n="test_registration_rule_credentials">Choose your own password now and use the same password after approval.</li>
           <li data-test-i18n="test_registration_rule_approval">After approval, you can log in from the online test page.</li>
         </ul>
         <div class="hero-actions">
@@ -53,6 +53,10 @@
           <input type="text" name="loginName" required data-test-i18n-placeholder="test_placeholder_login_name">
         </label>
         <label>
+          <span data-test-i18n="test_label_password">Password</span>
+          <input type="password" name="password" required minlength="6" data-test-i18n-placeholder="test_placeholder_password">
+        </label>
+        <label>
           <span data-test-i18n="test_registration_mobile">Mobile Number</span>
           <input type="tel" name="mobile" required data-test-i18n-placeholder="test_placeholder_mobile" placeholder="Enter mobile number">
         </label>
@@ -66,10 +70,6 @@
         <label>
           <span data-test-i18n="test_registration_batch">Batch</span>
           <input type="text" name="batchName" data-test-i18n-placeholder="test_placeholder_batch" placeholder="Morning / Evening">
-        </label>
-        <label class="full-width">
-          <span data-test-i18n="test_registration_exam">Exam / Course</span>
-          <input type="text" name="examName" data-test-i18n-placeholder="test_placeholder_exam" placeholder="LDC / UDC / SI / Police Constable">
         </label>
         <button type="submit" class="btn btn-primary full-width" data-test-i18n="test_registration_submit">Submit Registration</button>
         <p id="testRegistrationStatus" class="status-text full-width" role="status"></p>
@@ -85,9 +85,9 @@
 
   <script src="assets/js/firebase-config.js?v=23"></script>
   <script src="assets/js/i18n.js?v=23"></script>
-  <script src="assets/js/test-shared.js?v=26"></script>
-  <script src="assets/js/test-api.js?v=25"></script>
-  <script src="assets/js/test-register.js?v=23"></script>
+  <script src="assets/js/test-shared.js?v=29"></script>
+  <script src="assets/js/test-api.js?v=28"></script>
+  <script src="assets/js/test-register.js?v=25"></script>
 </body>
 </html>
 

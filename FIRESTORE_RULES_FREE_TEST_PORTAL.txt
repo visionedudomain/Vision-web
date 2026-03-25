@@ -43,9 +43,17 @@ service cloud.firestore {
         && request.resource.data.displayName is string
         && request.resource.data.loginName is string
         && request.resource.data.loginNameNormalized is string
+        && request.resource.data.authUid is string
+        && request.resource.data.authEmail is string
         && request.resource.data.mobile is string
         && request.resource.data.language in ["en", "ta"];
       allow read, update, delete: if isAdmin();
+    }
+
+    match /student_login_index/{loginNameNormalized} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow write: if isAdmin();
     }
 
     match /students/{studentId} {
