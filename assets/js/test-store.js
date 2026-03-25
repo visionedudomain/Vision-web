@@ -703,7 +703,8 @@
       state.api.where("loginNameNormalized", "==", loginNameNormalized),
       state.api.limit(1)
     ));
-    if (!existingStudentsSnapshot.empty) {
+    var legacyStudentSnapshot = existingStudentsSnapshot.empty ? null : existingStudentsSnapshot.docs[0];
+    if (legacyStudentSnapshot && (clean((legacyStudentSnapshot.data() || {}).authUid) || clean((legacyStudentSnapshot.data() || {}).authEmail))) {
       throw new Error("This login name is already approved for a student.");
     }
 
@@ -742,6 +743,10 @@
       passwordUpdatedAt: now,
       updatedAt: now
     }, { merge: true });
+
+    if (legacyStudentSnapshot && legacyStudentSnapshot.id !== studentId) {
+      await state.api.deleteDoc(state.api.doc(state.db, STUDENTS_COLLECTION, legacyStudentSnapshot.id));
+    }
 
     await state.api.setDoc(registrationRef, {
       displayName: clean(safe.displayName || registration.displayName),
