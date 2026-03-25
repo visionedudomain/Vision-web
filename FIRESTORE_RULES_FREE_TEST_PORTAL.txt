@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "visionedudomain@gmail.com";
+    }
+
+    function isApprovedStudent() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/students/$(request.auth.uid))
+        && get(/databases/$(database)/documents/students/$(request.auth.uid)).data.status == "approved";
+    }
+
+    function hasOwnAttempt(testId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/attempts/$(request.auth.uid + "__" + testId));
+    }
+
+    function ownAttempt(testId) {
+      return get(/databases/$(database)/documents/attempts/$(request.auth.uid + "__" + testId));
+    }
+
+    match /site/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /news/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /applications/{document} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /test_registrations/{registrationId} {
+      allow create: if request.auth == null
+        && registrationId == request.resource.data.loginNameNormalized
+        && request.resource.data.status == "pending"
+        && request.resource.data.displayName is string
+        && request.resource.data.loginName is string
+        && request.resource.data.loginNameNormalized is string
+        && request.resource.data.mobile is string
+        && request.resource.data.language in ["en", "ta"];
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == studentId);
+      allow write: if isAdmin();
+    }
+
+    match /tests/{testId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /published_tests/{testId} {
+      allow read: if isAdmin()
+        || (isApprovedStudent() && (resource.data.isActive == true || hasOwnAttempt(testId)));
+      allow write: if isAdmin();
+    }
+
+    match /test_answer_keys/{testId} {
+      allow read: if isAdmin()
+        || (isApprovedStudent()
+          && hasOwnAttempt(testId)
+          && ownAttempt(testId).data.status != "started");
+      allow write: if isAdmin();
+    }
+
+    match /attempts/{attemptId} {
+      allow read: if isAdmin()
+        || (request.auth != null && resource.data.studentId == request.auth.uid);
+
+      allow create: if isApprovedStudent()
+        && request.resource.data.studentId == request.auth.uid
+        && attemptId == request.auth.uid + "__" + request.resource.data.testId
+        && request.resource.data.status == "started"
+        && request.resource.data.startedAtMs is int
+        && request.resource.data.expiresAtMs is int
+        && request.resource.data.expiresAtMs > request.resource.data.startedAtMs
+        && request.resource.data.submittedAtMs == 0
+        && exists(/databases/$(database)/documents/published_tests/$(request.resource.data.testId))
+        && request.resource.data.totalQuestions
+            == get(/databases/$(database)/documents/published_tests/$(request.resource.data.testId)).data.questionCount
+        && get(/databases/$(database)/documents/published_tests/$(request.resource.data.testId)).data.isActive == true;
+
+      allow update: if isApprovedStudent()
+        && resource.data.studentId == request.auth.uid
+        && request.resource.data.studentId == request.auth.uid
+        && request.resource.data.testId == resource.data.testId
+        && request.resource.data.studentDisplayName == resource.data.studentDisplayName
+        && request.resource.data.studentLoginName == resource.data.studentLoginName
+        && request.resource.data.testTitle == resource.data.testTitle
+        && request.resource.data.language == resource.data.language
+        && request.resource.data.totalQuestions == resource.data.totalQuestions
+        && resource.data.status == "started"
+        && request.resource.data.status in ["submitted", "auto_submitted"]
+        && request.resource.data.startedAt == resource.data.startedAt
+        && request.resource.data.startedAtMs == resource.data.startedAtMs
+        && request.resource.data.expiresAt == resource.data.expiresAt
+        && request.resource.data.expiresAtMs == resource.data.expiresAtMs
+        && request.resource.data.submittedAtMs is int
+        && request.resource.data.submittedAtMs >= resource.data.startedAtMs;
+
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -428,17 +428,19 @@
       submitButtonBottom.addEventListener("click", submitNow);
     }
 
-    if (window.VisionTestApi.getStudentSessionToken()) {
-      try {
-        await window.VisionTestApi.getStudentSession();
-        setSessionVisible(true);
-        await refreshPortal();
-      } catch (error) {
-        window.VisionTestApi.logoutStudent();
-        setSessionVisible(false);
-        setStatus(t("test_portal_no_test"), false);
+    try {
+      await window.VisionTestApi.getStudentSession();
+      setSessionVisible(true);
+      await refreshPortal();
+    } catch (error) {
+      if (window.VisionTestApi.getStudentSessionToken()) {
+        try {
+          await window.VisionTestApi.logoutStudent();
+        } catch (logoutError) {
+          console.error(logoutError);
+        }
       }
-    } else {
+      setSessionVisible(false);
       setStatus(t("test_portal_no_test"), false);
     }
 

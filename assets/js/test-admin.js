@@ -1003,7 +1003,6 @@
           "<td>" + (student.language === "ta" ? t("test_language_tamil") : t("test_language_english")) + "</td>" +
           "<td><span class='status-pill status-pill-" + (student.status || "draft") + "'>" + getStatusLabel(student.status || "approved") + "</span></td>" +
           "<td><div class='table-actions'>" +
-          "<button type='button' class='btn btn-outline btn-small' data-reset-student-password='" + student.id + "'>" + t("test_btn_reset_password") + "</button>" +
           "<button type='button' class='btn " + (student.status === "inactive" ? "btn-primary" : "btn-danger") + " btn-small' data-update-student-status='" + student.id + "' data-next-status='" + (student.status === "inactive" ? "approved" : "inactive") + "'>" + (student.status === "inactive" ? t("test_btn_activate") : t("test_btn_deactivate")) + "</button>" +
           "</div></td>";
         studentsBody.appendChild(row);
@@ -1105,6 +1104,9 @@
       if (!clean(studentApprovalForm.elements.loginName.value)) {
         studentApprovalForm.elements.loginName.value = registration.loginName || "";
       }
+      if (studentApprovalForm.elements.tempPassword) {
+        studentApprovalForm.elements.tempPassword.value = "";
+      }
       studentApprovalForm.elements.language.value = registration.language || "en";
       studentApprovalForm.elements.batchName.value = registration.batchName || "";
       studentApprovalForm.elements.examName.value = registration.examName || "";
@@ -1194,15 +1196,16 @@
       studentApprovalForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         try {
-          await window.VisionTestApi.approveStudent({
+          var approvalResult = await window.VisionTestApi.approveStudent({
             registrationId: clean(studentApprovalForm.elements.registrationId.value),
             loginName: clean(studentApprovalForm.elements.loginName.value),
+            tempPassword: clean(studentApprovalForm.elements.tempPassword.value),
             language: clean(studentApprovalForm.elements.language.value),
             batchName: clean(studentApprovalForm.elements.batchName.value),
             examName: clean(studentApprovalForm.elements.examName.value)
           });
           studentApprovalForm.reset();
-          setStatus("testRegistrationsStatus", t("test_status_student_approved"), false);
+          setStatus("testRegistrationsStatus", t("test_status_student_approved") + (approvalResult && approvalResult.tempPassword ? " " + t("test_label_temp_password") + ": " + approvalResult.tempPassword : ""), false);
         } catch (error) {
           setStatus("testRegistrationsStatus", error && error.message ? error.message : "Unable to approve student.", true);
         }
@@ -1219,10 +1222,10 @@
           var selectedRegistrationId = approveButton.getAttribute("data-approve-registration");
           studentApprovalForm.elements.registrationId.value = selectedRegistrationId;
           applyRegistrationToForm(selectedRegistrationId);
-          await window.VisionTestApi.approveStudent({
+          var quickApproval = await window.VisionTestApi.approveStudent({
             registrationId: selectedRegistrationId
           });
-          setStatus("testRegistrationsStatus", t("test_status_student_approved"), false);
+          setStatus("testRegistrationsStatus", t("test_status_student_approved") + (quickApproval && quickApproval.tempPassword ? " " + t("test_label_temp_password") + ": " + quickApproval.tempPassword : ""), false);
         } catch (error) {
           setStatus("testRegistrationsStatus", error && error.message ? error.message : "Unable to approve registration.", true);
         }
@@ -1231,24 +1234,7 @@
 
     if (studentsBody) {
       studentsBody.addEventListener("click", async function (event) {
-        var resetButton = event.target.closest("button[data-reset-student-password]");
         var statusButton = event.target.closest("button[data-update-student-status]");
-        if (resetButton) {
-          var newPassword = window.prompt(t("test_prompt_new_password"));
-          if (!newPassword) {
-            return;
-          }
-          try {
-            await window.VisionTestApi.resetStudentPassword({
-              studentId: resetButton.getAttribute("data-reset-student-password"),
-              password: newPassword
-            });
-            setStatus("testStudentsStatus", t("test_status_password_reset"), false);
-          } catch (error) {
-            setStatus("testStudentsStatus", error && error.message ? error.message : "Unable to reset password.", true);
-          }
-          return;
-        }
         if (statusButton) {
           var nextStatus = statusButton.getAttribute("data-next-status");
           var confirmMessage = nextStatus === "inactive" ? t("test_prompt_confirm_deactivate") : t("test_prompt_confirm_activate");
@@ -1327,6 +1313,12 @@
             return clean(row.loginName);
           });
           var result = await window.VisionTestApi.bulkApproveStudents(dataRows);
+          if (result && Array.isArray(result.credentials) && result.credentials.length) {
+            var credentialsCsv = ["loginName,tempPassword"].concat(result.credentials.map(function (item) {
+              return [csvCell(item.loginName), csvCell(item.tempPassword)].join(",");
+            })).join("\n");
+            downloadTextFile("vision-test-approved-student-passwords.csv", credentialsCsv, "text/csv;charset=utf-8");
+          }
           setStatus("testRegistrationsStatus", t("test_status_bulk_approved") + (result && typeof result.count === "number" ? " (" + result.count + ")" : ""), false);
         } catch (error) {
           setStatus("testRegistrationsStatus", error && error.message ? error.message : "Unable to process approval CSV.", true);
