@@ -340,14 +340,20 @@
     }, {});
   }
 
-  async function getActivePublicTestSnapshot() {
+  async function getActivePublicTestSnapshot(studentLanguage) {
     await ensureStudentFirebase();
     var snapshot = await studentState.api.getDocs(studentState.api.query(
       studentState.api.collection(studentState.db, PUBLIC_TESTS_COLLECTION),
-      studentState.api.where("isActive", "==", true),
-      studentState.api.limit(1)
+      studentState.api.where("isActive", "==", true)
     ));
-    return snapshot.empty ? null : snapshot.docs[0];
+    var targetLanguage = normalizeLanguage(studentLanguage);
+    var targetDoc = null;
+    snapshot.docs.forEach(function (docSnapshot) {
+      if (normalizeLanguage((docSnapshot.data() || {}).language) === targetLanguage) {
+        targetDoc = docSnapshot;
+      }
+    });
+    return targetDoc;
   }
 
   async function getStudentSnapshotByUid(uid) {
@@ -517,7 +523,7 @@
     var sessionPayload = await getStudentSession();
     var activeTestSnapshot;
     try {
-      activeTestSnapshot = await getActivePublicTestSnapshot();
+      activeTestSnapshot = await getActivePublicTestSnapshot(sessionPayload.student.language);
     } catch (error) {
       if (isPermissionError(error)) {
         throw createError(

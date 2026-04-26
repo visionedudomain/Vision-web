@@ -4,7 +4,7 @@ const { getDb } = require("./_lib/firebase");
 const { verifyStudentSession } = require("./_lib/test-auth");
 const { json, noContent } = require("./_lib/http");
 const { buildPublicTest, clean, getActiveTest, getAttemptForStudent } = require("./_lib/test-data");
-const { finalizeAttempt } = require("./_lib/test-attempts");
+const { buildSummary, finalizeAttempt } = require("./_lib/test-attempts");
 
 function readStudentToken(event) {
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
@@ -64,13 +64,18 @@ exports.handler = async function (event) {
           loginName: student.loginName
         },
         test: publicTest,
-        summary: {
+        summary: buildSummary({
           score: Number(existingAttempt.data.score || 0),
           correctCount: Number(existingAttempt.data.correctCount || 0),
           answeredCount: Number(existingAttempt.data.answeredCount || 0),
           totalQuestions: Number(existingAttempt.data.totalQuestions || publicTest.questionCount || 0),
-          submittedAt: existingAttempt.data.submittedAt || ""
-        },
+          submittedAt: existingAttempt.data.submittedAt || "",
+          percentage: Number(existingAttempt.data.percentage || 0),
+          attemptedAccuracy: Number(existingAttempt.data.attemptedAccuracy || 0),
+          unansweredCount: Number(existingAttempt.data.unansweredCount || 0),
+          performanceStatusCode: existingAttempt.data.performanceStatusCode || "",
+          suggestionCodes: Array.isArray(existingAttempt.data.suggestionCodes) ? existingAttempt.data.suggestionCodes : []
+        }, { submittedAt: existingAttempt.data.submittedAt || "" }),
         message: "Your test has already been submitted."
       });
     }

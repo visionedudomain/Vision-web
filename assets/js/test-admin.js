@@ -111,7 +111,7 @@
   }
 
   function normalizeQuestionStartLine(text) {
-    return clean(text).replace(/^(q(?:uestion)?\s*)?((?:\d\s*){1,3})\s*([\)\].:-])\s*/i, function (_, prefix, digits, punctuation) {
+    return clean(text).replace(/^(q(?:uestion)?\s*)?\(?((?:\d\s*){1,3})\s*([\)\].:-])\s*/i, function (_, prefix, digits, punctuation) {
       return clean(prefix || "") + (prefix ? "" : "") + String(digits || "").replace(/\s+/g, "") + punctuation + " ";
     }).replace(/^\s+/, "");
   }
@@ -148,7 +148,7 @@
     });
   }
 
-  var EXPECTED_IMPORTED_QUESTION_COUNT = 100;
+  var EXPECTED_IMPORTED_QUESTION_COUNT = 20;
   var pdfJsPromise = null;
 
   function isTamilLine(text) {
@@ -224,11 +224,6 @@
     }).filter(function (line) {
       var lower = line.toLowerCase();
       
-      // Filter out Tamil lines (for bilingual PDFs)
-      if (isTamilLine(line)) {
-        return false;
-      }
-      
       // Filter out ONLY clear footer/header texts
       if (/^vision education academy/i.test(lower) ||
         /^contact no:/i.test(lower) ||
@@ -268,10 +263,6 @@
       return true;
     }
 
-    if (isTamilLine(line)) {
-      return true;
-    }
-
     return /^vision education academy/i.test(lower) ||
       /^contact no:/i.test(lower) ||
       /^udc\s*\/\s*ldc/i.test(lower) ||
@@ -284,7 +275,7 @@
   }
 
   function normalizeEmbeddedQuestionStarts(text) {
-    return clean(text).replace(/(^|\s)(q(?:uestion)?\s*)?((?:\d\s*){1,3})\s*([\)\].:-])\s*(?=[A-Za-z"'“‘(\[])/ig, function (_, leadingSpace, prefix, digits, punctuation) {
+    return clean(text).replace(/(^|\s)(q(?:uestion)?\s*)?\(?((?:\d\s*){1,3})\s*([\)\].:-])\s*(?=[A-Za-z"'“‘(\[])/ig, function (_, leadingSpace, prefix, digits, punctuation) {
       return String(leadingSpace || "") + clean(prefix || "") + String(digits || "").replace(/\s+/g, "") + punctuation + " ";
     });
   }
@@ -292,7 +283,7 @@
   function splitEmbeddedQuestionLines(text) {
     var normalized = normalizeEmbeddedQuestionStarts(normalizeImportedLine(clean(text)));
     var indices = [];
-    var matcher = /(?:^|\s)(?:q(?:uestion)?\s*)?(\d{1,3})\s*[\)\].:-]\s*(?=[A-Za-z"'“‘(\[])/ig;
+    var matcher = /(?:^|\s)(?:q(?:uestion)?\s*)?\(?(\d{1,3})\s*[\)\].:-]\s*(?=[A-Za-z"'“‘(\[])/ig;
     var match;
     var parts = [];
     var cursor = 0;
@@ -571,7 +562,7 @@
   function extractAnswerKeyMap(lines) {
     var answerMap = {};
     (Array.isArray(lines) ? lines : []).forEach(function (line) {
-      var matcher = /((?:\d\s*){1,3})\s*[\)\].:-]?\s*(?:answer\s*[:\-]?\s*)?([A-D])(?=\b)/gi;
+      var matcher = /\(?((?:\d\s*){1,3})\s*[\)\].:-]?\s*(?:answer\s*[:\-]?\s*)?([A-D])(?=\b)/gi;
       var match;
       while ((match = matcher.exec(String(line || "")))) {
         answerMap[String(match[1]).replace(/\s+/g, "")] = String(match[2]).toLowerCase();
@@ -638,7 +629,7 @@
 
     var lines = [];
     rawLines.forEach(function (line) {
-      String(line || "").split(/(?=(?:^|\s+)[A-D]\s*[\)\].:-](?:\s+|$))/i).forEach(function (part) {
+      String(line || "").split(/(?=(?:^|\s+)(?:\([A-Da-d]\)|[A-Da-d]\s*[\)\].:-])(?:\s+|$))/i).forEach(function (part) {
         if (clean(part)) {
           lines.push(clean(part));
         }
@@ -660,14 +651,14 @@
         return;
       }
 
-      var optionMatch = sanitizedLine.match(/^([A-D])[\)\].:-]\s*(.*)$/i);
+      var optionMatch = sanitizedLine.match(/^(?:\(([A-Da-d])\)|([A-Da-d])\s*[\)\].:-])\s*(.*)$/i);
       if (optionMatch) {
         if (currentOption && currentOption.text) {
           options.push(currentOption);
         }
         currentOption = {
-          id: String(optionMatch[1]).toLowerCase(),
-          text: clean(optionMatch[2])
+          id: String(optionMatch[1] || optionMatch[2]).toLowerCase(),
+          text: clean(optionMatch[3])
         };
         return;
       }
@@ -687,8 +678,8 @@
     var prompt = clean(promptParts.join(" "));
     if (options.length < 2) {
       var joined = lines.join(" ");
-      var promptMatch = joined.match(/^(.*?)(?=\s+[A-D][\)\].:-]\s+)/i);
-      if (promptMatch && !prompt) {
+      var promptMatch = joined.match(/^(.*?)(?=\s+(?:\([A-Da-d]\)|[A-Da-d]\s*[\)\].:-])\s*)/i);
+      if (promptMatch) {
         prompt = clean(promptMatch[1]);
       }
       options = extractInlineOptions(joined);
@@ -708,8 +699,10 @@
     return {
       id: "question_" + questionNumber + "_" + Math.random().toString(36).substr(2, 6),
       questionNumber: questionNumber,
-      prompt: prompt,
-      options: options,
+      prompt: prompt.replace(/\s*[\(\)]+\s*$/g, "").trim(),
+      options: options.map(function (opt) {
+        return { id: opt.id, text: opt.text.replace(/\s*[\(\)]+\s*$/g, "").trim() };
+      }),
       correctOptionId: /^[a-d]$/.test(correctOptionId) ? correctOptionId : ""
     };
   }

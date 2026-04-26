@@ -4,7 +4,7 @@ const { getDb } = require("./_lib/firebase");
 const { verifyStudentSession } = require("./_lib/test-auth");
 const { json, noContent, readJsonBody } = require("./_lib/http");
 const { clean, getActiveTest, getAttemptForStudent } = require("./_lib/test-data");
-const { scoreAnswers } = require("./_lib/test-attempts");
+const { buildSummary, scoreAnswers } = require("./_lib/test-attempts");
 
 exports.handler = async function (event) {
   if (event.httpMethod === "OPTIONS") {
@@ -35,13 +35,7 @@ exports.handler = async function (event) {
     if (clean(attempt.data.status) !== "started") {
       return json(200, {
         ok: true,
-        summary: {
-          score: Number(attempt.data.score || 0),
-          correctCount: Number(attempt.data.correctCount || 0),
-          answeredCount: Number(attempt.data.answeredCount || 0),
-          totalQuestions: Number(attempt.data.totalQuestions || 0),
-          submittedAt: attempt.data.submittedAt || ""
-        }
+        summary: buildSummary(attempt.data, { submittedAt: attempt.data.submittedAt || "" })
       });
     }
 
@@ -51,26 +45,26 @@ exports.handler = async function (event) {
     const submittedAt = new Date().toISOString();
     const expiresAtTime = new Date(attempt.data.expiresAt || "").getTime();
     const timedOut = expiresAtTime && expiresAtTime <= Date.now();
+    const summary = buildSummary(result, { submittedAt: submittedAt });
 
     await attempt.ref.set({
       answers,
-      score: result.score,
-      correctCount: result.correctCount,
-      answeredCount: result.answeredCount,
-      totalQuestions: result.totalQuestions,
-      submittedAt,
+      score: summary.score,
+      correctCount: summary.correctCount,
+      answeredCount: summary.answeredCount,
+      totalQuestions: summary.totalQuestions,
+      percentage: summary.percentage,
+      attemptedAccuracy: summary.attemptedAccuracy,
+      unansweredCount: summary.unansweredCount,
+      performanceStatusCode: summary.performanceStatusCode,
+      suggestionCodes: summary.suggestionCodes,
+      submittedAt: summary.submittedAt,
       status: body.autoSubmit || timedOut ? "auto_submitted" : "submitted"
     }, { merge: true });
 
     return json(200, {
       ok: true,
-      summary: {
-        score: result.score,
-        correctCount: result.correctCount,
-        answeredCount: result.answeredCount,
-        totalQuestions: result.totalQuestions,
-        submittedAt
-      }
+      summary: summary
     });
   } catch (error) {
     return json(500, { error: error && error.message ? error.message : "Unable to submit the test." });

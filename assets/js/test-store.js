@@ -662,18 +662,22 @@
     var publicSnapshot = await state.api.getDocs(state.api.query(state.api.collection(state.db, PUBLIC_TESTS_COLLECTION), state.api.where("isActive", "==", true)));
     var batch = state.api.writeBatch(state.db);
     snapshot.docs.forEach(function (docSnapshot) {
-      batch.set(state.api.doc(state.db, TESTS_COLLECTION, docSnapshot.id), {
-        isActive: false,
-        status: "closed",
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      if (normalizeLanguage((docSnapshot.data() || {}).language) === targetData.language) {
+        batch.set(state.api.doc(state.db, TESTS_COLLECTION, docSnapshot.id), {
+          isActive: false,
+          status: "closed",
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
     });
     publicSnapshot.docs.forEach(function (docSnapshot) {
-      batch.set(state.api.doc(state.db, PUBLIC_TESTS_COLLECTION, docSnapshot.id), {
-        isActive: false,
-        status: "closed",
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      if (normalizeLanguage((docSnapshot.data() || {}).language) === targetData.language) {
+        batch.set(state.api.doc(state.db, PUBLIC_TESTS_COLLECTION, docSnapshot.id), {
+          isActive: false,
+          status: "closed",
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
     });
     batch.set(state.api.doc(state.db, TESTS_COLLECTION, targetId), {
       isActive: true,

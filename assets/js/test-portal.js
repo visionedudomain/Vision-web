@@ -68,6 +68,13 @@
     }
   }
 
+  function setHtml(id, value) {
+    var element = byId(id);
+    if (element) {
+      element.innerHTML = value || "";
+    }
+  }
+
   function setStudentWelcome(student) {
     var safe = student && typeof student === "object" ? student : {};
     setText("studentWelcomeName", safe.displayName || safe.loginName || t("test_portal_student_fallback", "Student"));
@@ -75,6 +82,49 @@
 
   function formatMinutes(value) {
     return String(value || 0) + " " + t("test_unit_minutes", "min");
+  }
+
+  function getPerformanceStatusLabel(code) {
+    var key = "test_performance_" + clean(code || "needs_improvement");
+    return t(key, t("test_performance_needs_improvement", "Needs Improvement"));
+  }
+
+  function getPerformanceStatusNote(code) {
+    var key = "test_performance_note_" + clean(code || "needs_improvement");
+    return t(key, "");
+  }
+
+  function getSuggestionCopy(code) {
+    var safeCode = clean(code);
+    return {
+      title: t("test_suggestion_" + safeCode + "_title", safeCode),
+      body: t("test_suggestion_" + safeCode + "_body", "")
+    };
+  }
+
+  function renderModelInsight(modelInsight) {
+    var element = byId("resultModelInsight");
+    if (!element) {
+      return;
+    }
+    if (!modelInsight || typeof modelInsight !== "object") {
+      element.textContent = "";
+      element.classList.add("hidden");
+      return;
+    }
+
+    var label = clean(modelInsight.label) || t("test_model_status_unavailable", "AI evaluation unavailable.");
+    var detail = clean(modelInsight.detail);
+    var probability = Number(modelInsight.probabilityCorrect || 0);
+    var message = t("test_portal_ai_evaluation", "AI Evaluation") + ": " + label;
+    if (modelInsight.connected && probability > 0) {
+      message += " (" + (probability * 100).toFixed(1).replace(/\.0$/, "") + "%)";
+    }
+    if (detail) {
+      message += " - " + detail;
+    }
+    element.textContent = message;
+    element.classList.remove("hidden");
   }
 
   function getPortalStateMessage(state) {
@@ -251,6 +301,9 @@
     setText("resultCorrectValue", String(summary.correctCount || 0));
     setText("resultAttemptedValue", String(summary.answeredCount || 0));
     setText("resultSubmittedAtValue", formatDateTime(summary.submittedAt));
+    setText("resultStatusValue", clean(summary.customStatusLabel) || getPerformanceStatusLabel(summary.performanceStatusCode));
+    setText("resultStatusNote", clean(summary.customStatusNote) || getPerformanceStatusNote(summary.performanceStatusCode));
+    renderModelInsight(summary.modelInsight);
   }
 
   async function autoSubmitAttempt() {
@@ -351,6 +404,15 @@
     setStatus(t("test_portal_loading"), false);
 
     if (loginForm) {
+      if (window.VisionTestApi.isDemoMode && window.VisionTestApi.isDemoMode()) {
+        var demoCredentials = window.VisionTestApi.getDemoCredentials ? window.VisionTestApi.getDemoCredentials() : null;
+        if (demoCredentials) {
+          loginForm.elements.loginName.value = demoCredentials.loginName || "";
+          loginForm.elements.password.value = demoCredentials.password || "";
+        }
+        setStatus(t("test_demo_mode_hint", "Demo mode is active. Use demo-student / demo123 and submit the sample test after starting the local model server."), false);
+      }
+
       loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
         try {
@@ -452,7 +514,11 @@
         }
       }
       setSessionVisible(false);
-      setStatus(t("test_portal_no_test"), false);
+      if (window.VisionTestApi.isDemoMode && window.VisionTestApi.isDemoMode()) {
+        setStatus(t("test_demo_mode_hint", "Demo mode is active. Use demo-student / demo123 and start the local Random Forest server before submitting the sample test."), false);
+      } else {
+        setStatus(t("test_portal_no_test"), false);
+      }
     }
 
     window.addEventListener("vision-language-changed", function () {
