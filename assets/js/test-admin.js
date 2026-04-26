@@ -133,7 +133,7 @@
   function getQuestionStartNumber(text) {
     var match = normalizeQuestionStartLine(text).match(/^(?:q(?:uestion)?\s*)?(\d{1,3})[\)\].:-]\s*/i);
     var number = match ? Number(match[1]) : 0;
-    return number >= 1 && number <= EXPECTED_IMPORTED_QUESTION_COUNT ? number : 0;
+    return number >= 1 && number <= 300 ? number : 0;
   }
 
   function escapeHtml(value) {
@@ -629,7 +629,7 @@
 
     var lines = [];
     rawLines.forEach(function (line) {
-      String(line || "").split(/(?=(?:^|\s+)(?:\([A-Da-d]\)|[A-Da-d]\s*[\)\].:-])(?:\s+|$))/i).forEach(function (part) {
+      String(line || "").split(/(?=(?:^|\s+)(?:\([A-Da-d1-4]\)|[A-Da-d1-4]\s*[\)\].:-])(?:\s+|$))/i).forEach(function (part) {
         if (clean(part)) {
           lines.push(clean(part));
         }
@@ -651,7 +651,7 @@
         return;
       }
 
-      var optionMatch = sanitizedLine.match(/^(?:\(([A-Da-d])\)|([A-Da-d])\s*[\)\].:-])\s*(.*)$/i);
+      var optionMatch = sanitizedLine.match(/^(?:\(([A-Da-d1-4])\)|([A-Da-d1-4])\s*[\)\].:-])\s*(.*)$/i);
       if (optionMatch) {
         if (currentOption && currentOption.text) {
           options.push(currentOption);
@@ -678,7 +678,7 @@
     var prompt = clean(promptParts.join(" "));
     if (options.length < 2) {
       var joined = lines.join(" ");
-      var promptMatch = joined.match(/^(.*?)(?=\s+(?:\([A-Da-d]\)|[A-Da-d]\s*[\)\].:-])\s*)/i);
+      var promptMatch = joined.match(/^(.*?)(?=\s+(?:\([A-Da-d1-4]\)|[A-Da-d1-4]\s*[\)\].:-])\s*)/i);
       if (promptMatch) {
         prompt = clean(promptMatch[1]);
       }
@@ -807,7 +807,7 @@
       }
     });
 
-    for (index = 1; index <= EXPECTED_IMPORTED_QUESTION_COUNT; index += 1) {
+    for (index = 1; index <= maxNumber; index += 1) {
       if (numbers[String(index)]) {
         exactCount += 1;
       }
@@ -834,13 +834,8 @@
     });
 
     rankedCandidates.sort(function (left, right) {
-      var leftDistance = Math.abs(left.metrics.count - EXPECTED_IMPORTED_QUESTION_COUNT);
-      var rightDistance = Math.abs(right.metrics.count - EXPECTED_IMPORTED_QUESTION_COUNT);
       if (right.metrics.exactCount !== left.metrics.exactCount) {
         return right.metrics.exactCount - left.metrics.exactCount;
-      }
-      if (leftDistance !== rightDistance) {
-        return leftDistance - rightDistance;
       }
       if (right.metrics.count !== left.metrics.count) {
         return right.metrics.count - left.metrics.count;
@@ -861,7 +856,7 @@
   function getIncompleteImportMessage(metrics) {
     return replaceTokens(t("test_builder_pdf_incomplete", "Could import only {count} of {expected} questions from this PDF."), {
       count: String(Number(metrics && metrics.exactCount || metrics && metrics.count || 0)),
-      expected: String(EXPECTED_IMPORTED_QUESTION_COUNT)
+      expected: String(metrics && metrics.maxNumber || 0)
     });
   }
 
@@ -882,7 +877,7 @@
       throw new Error(t("test_builder_pdf_invalid"));
     }
 
-    if (bestMatch.metrics.count !== EXPECTED_IMPORTED_QUESTION_COUNT || bestMatch.metrics.exactCount !== EXPECTED_IMPORTED_QUESTION_COUNT) {
+    if (bestMatch.metrics.uniqueCount < bestMatch.metrics.maxNumber || bestMatch.metrics.count < bestMatch.metrics.maxNumber) {
       throw new Error(getIncompleteImportMessage(bestMatch.metrics));
     }
 
