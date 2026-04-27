@@ -430,7 +430,24 @@
   }
 
   async function buildDemoSummary(test, answers, startedAt, submittedAt) {
-    var baseSummary = buildRuleSummary(scoreAnswers(test.questions, answers), test.questions, answers, submittedAt);
+    var scoreResult = scoreAnswers(test.questions, answers);
+    
+    // Use the new standalone suggestion generator
+    var baseSummary;
+    if (window.SuggestionGenerator && typeof window.SuggestionGenerator.buildSummaryWithSuggestions === "function") {
+      baseSummary = window.SuggestionGenerator.buildSummaryWithSuggestions(
+        scoreResult.correctCount,
+        scoreResult.totalQuestions,
+        scoreResult.answeredCount,
+        submittedAt || getNowIso()
+      );
+      console.log("✅ Using SuggestionGenerator for demo:", baseSummary);
+    } else {
+      // Fallback if generator hasn't loaded
+      baseSummary = buildRuleSummary(scoreResult, test.questions, answers, submittedAt);
+      console.warn("⚠️ SuggestionGenerator not available, using fallback");
+    }
+    
     var modelPayload = buildModelPayload(test, answers, startedAt, submittedAt);
 
     try {

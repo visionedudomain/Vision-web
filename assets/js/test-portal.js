@@ -96,9 +96,21 @@
 
   function getSuggestionCopy(code) {
     var safeCode = clean(code);
+    var title = t("test_suggestion_" + safeCode + "_title", "");
+    var body = t("test_suggestion_" + safeCode + "_body", "");
+    
+    // If translations are missing, provide defaults
+    if (!title) {
+      var codeWords = safeCode.split("_").join(" ");
+      title = codeWords.charAt(0).toUpperCase() + codeWords.slice(1);
+    }
+    if (!body) {
+      body = "Focus on improving this area with targeted practice.";
+    }
+    
     return {
-      title: t("test_suggestion_" + safeCode + "_title", safeCode),
-      body: t("test_suggestion_" + safeCode + "_body", "")
+      title: title,
+      body: body
     };
   }
 
@@ -131,13 +143,18 @@
     var listContainer = byId("resultSuggestionsList");
     var emptyMessage = byId("resultSuggestionsEmpty");
     
+    console.log("🎯 renderSuggestions called with summary:", summary);
+    
     if (!listContainer || !emptyMessage) {
+      console.warn("⚠️ Suggestion containers not found");
       return;
     }
 
     var suggestionCodes = Array.isArray(summary.suggestionCodes) ? summary.suggestionCodes : [];
+    console.log("📝 Suggestion codes:", suggestionCodes);
     
     if (suggestionCodes.length === 0) {
+      console.log("ℹ️ No suggestions to display");
       listContainer.innerHTML = "";
       emptyMessage.classList.remove("hidden");
       return;
@@ -146,17 +163,28 @@
     listContainer.innerHTML = "";
     emptyMessage.classList.add("hidden");
 
+    var renderedCount = 0;
     suggestionCodes.forEach(function (code) {
       var copy = getSuggestionCopy(code);
-      if (copy.title && copy.body) {
+      console.log("📌 Processing suggestion:", code, copy);
+      
+      if (copy.title || copy.body) {
         var item = document.createElement("div");
         item.className = "result-suggestion-item";
+        var title = copy.title || code;
+        var body = copy.body || "Practice and improve in this area.";
         item.innerHTML = "" +
-          "<strong>" + copy.title + "</strong>" +
-          "<p>" + copy.body + "</p>";
+          "<strong>" + title + "</strong>" +
+          "<p>" + body + "</p>";
         listContainer.appendChild(item);
+        renderedCount += 1;
+        console.log("✅ Rendered suggestion:", code);
+      } else {
+        console.warn("⚠️ Missing translation for:", code);
       }
     });
+    
+    console.log("✨ Total suggestions rendered:", renderedCount);
   }
 
   function getPortalStateMessage(state) {
@@ -325,6 +353,7 @@
   }
 
   function renderResult(summary) {
+    console.log("🎬 renderResult called with:", summary);
     clearTimer();
     portalState.resultSummary = summary || null;
     setSectionVisible("testRunnerSection", false);
@@ -336,6 +365,7 @@
     setText("resultStatusValue", clean(summary.customStatusLabel) || getPerformanceStatusLabel(summary.performanceStatusCode));
     setText("resultStatusNote", clean(summary.customStatusNote) || getPerformanceStatusNote(summary.performanceStatusCode));
     renderModelInsight(summary.modelInsight);
+    console.log("🎯 About to render suggestions...");
     renderSuggestions(summary);
   }
 
