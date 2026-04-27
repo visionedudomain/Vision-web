@@ -218,6 +218,31 @@
           <section class="form-card admin-block admin-span">
             <div class="row-between">
               <div>
+                <h2 data-test-i18n="test_rewrite_requests_title">Student Rewrite Requests</h2>
+                <p class="form-note" data-test-i18n="test_rewrite_requests_hint">Students who requested to retake their tests. Approve or reject their requests.</p>
+              </div>
+            </div>
+            <p id="testRewriteStatus" class="status-text" role="status"></p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-test-i18n="test_th_candidate">Student</th>
+                    <th data-test-i18n="test_label_test_title">Test</th>
+                    <th>Score</th>
+                    <th data-test-i18n="test_portal_submitted_at">Requested At</th>
+                    <th data-test-i18n="test_th_status">Status</th>
+                    <th data-test-i18n="test_th_actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="testRewriteRequestsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="form-card admin-block admin-span">
+            <div class="row-between">
+              <div>
                 <h2 data-test-i18n="test_builder_title">Online Test Builder</h2>
                 <p class="form-note" data-test-i18n="test_builder_hint">Create one active MCQ test at a time. Students can start within the time window and finish within their timer.</p>
               </div>

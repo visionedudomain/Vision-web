@@ -527,6 +527,51 @@
       resumeButton.addEventListener("click", startOrResume);
     }
 
+    async function requestRewrite() {
+      if (!portalState.resultSummary || !portalState.testData) {
+        return;
+      }
+      var rewriteButton = byId("requestRewriteButton");
+      var rewriteStatus = byId("resultRewriteStatus");
+      
+      if (rewriteButton) {
+        rewriteButton.disabled = true;
+        rewriteButton.textContent = t("test_rewrite_requesting", "Requesting...") || "Requesting...";
+      }
+      
+      try {
+        var result = await window.VisionTestApi.requestRewrite({
+          testId: portalState.testData.id
+        });
+        
+        if (rewriteStatus) {
+          rewriteStatus.textContent = t("test_rewrite_requested", "Rewrite request submitted successfully. Please wait for admin approval.");
+          rewriteStatus.classList.remove("status-error");
+          rewriteStatus.classList.add("status-success");
+        }
+        if (rewriteButton) {
+          rewriteButton.disabled = true;
+          rewriteButton.textContent = t("test_rewrite_requested_button", "Request Sent") || "Request Sent";
+        }
+      } catch (error) {
+        if (rewriteStatus) {
+          var errorMsg = error && error.message ? error.message : "Unable to submit rewrite request.";
+          rewriteStatus.textContent = errorMsg;
+          rewriteStatus.classList.remove("status-success");
+          rewriteStatus.classList.add("status-error");
+        }
+        if (rewriteButton) {
+          rewriteButton.disabled = false;
+          rewriteButton.textContent = t("test_btn_request_rewrite", "Request to Retake Test");
+        }
+      }
+    }
+
+    var requestRewriteButton = byId("requestRewriteButton");
+    if (requestRewriteButton) {
+      requestRewriteButton.addEventListener("click", requestRewrite);
+    }
+
     async function submitNow() {
       if (!portalState.testData || portalState.isSubmitting) {
         return;

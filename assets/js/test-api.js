@@ -772,7 +772,56 @@
     getStudentSession: getStudentSession,
     getActiveTest: getActiveTest,
     startAttempt: startAttempt,
-    submitAttempt: submitAttempt
+    submitAttempt: submitAttempt,
+    requestRewrite: async function (payload) {
+      if (!window.VisionTestStore) {
+        throw createError("Test store not ready", "NO_STORE");
+      }
+      var safe = payload && typeof payload === "object" ? payload : {};
+      var sessionToken = getStudentSessionToken();
+      if (!sessionToken) {
+        throw createError("No active session", "SESSION_MISSING");
+      }
+      var baseUrl = this.getBackendBaseUrl();
+      if (!baseUrl) {
+        throw createError("Backend URL not configured", "CONFIG_MISSING");
+      }
+      try {
+        var response = await window.fetch(baseUrl + "/test-student-rewrite", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + sessionToken
+          },
+          body: JSON.stringify({
+            testId: clean(safe.testId)
+          })
+        });
+        if (!response.ok) {
+          throw createError("Request failed with status " + response.status, "REWRITE_FAILED");
+        }
+        return await response.json();
+      } catch (error) {
+        if (isNetworkError(error)) {
+          throw createError("Network error: " + (error.message || "Connection failed"), "NETWORK_ERROR");
+        }
+        throw error;
+      }
+    },
+    getRewriteRequests: async function () {
+      var store = await requireAdminStore();
+      return store.getRewriteRequests();
+    },
+    approveRewrite: async function (payload) {
+      var store = await requireAdminStore();
+      var safe = payload && typeof payload === "object" ? payload : {};
+      return store.approveRewrite(clean(safe.requestId));
+    },
+    rejectRewrite: async function (payload) {
+      var store = await requireAdminStore();
+      var safe = payload && typeof payload === "object" ? payload : {};
+      return store.rejectRewrite(clean(safe.requestId));
+    }
   };
 
   ensureStudentFirebase().catch(function () {
