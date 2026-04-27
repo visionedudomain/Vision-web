@@ -1,84 +1,90 @@
 (function () {
   "use strict";
 
-  /**
-   * STANDALONE SUGGESTION GENERATOR
-   * Generates personalized, non-repetitive suggestions based on test performance
-   */
-
-  // Comprehensive suggestion database with multiple variants
-  const SUGGESTION_DATABASE = {
+  // Comprehensive suggestion database
+  var SUGGESTION_DATABASE = {
     high_performance: {
-      codes: ["maintain_mock_tests", "review_missed_questions"],
-      message: "You performed excellently! Keep up this momentum with regular full-length practice tests."
+      codes: ["maintain_mock_tests", "review_missed_questions"]
     },
     good_performance: {
-      codes: ["practice_topic_sets", "review_missed_questions"],
-      message: "Great result! Focus on consistency across different question types."
+      codes: ["practice_topic_sets", "review_missed_questions"]
     },
     average_performance: {
-      codes: ["practice_small_sets", "focus_weak_subjects"],
-      message: "Steady progress. Practice smaller focused sets to improve accuracy."
+      codes: ["practice_small_sets", "focus_weak_subjects"]
     },
     low_performance: {
-      codes: ["revise_core_concepts", "practice_small_sets"],
-      message: "Start with fundamentals. Build a strong foundation before taking full tests."
+      codes: ["revise_core_concepts", "practice_small_sets"]
     },
     time_management_issues: {
-      codes: ["improve_time_management", "attempt_all_questions"],
-      message: "Work on your pacing. Try to attempt all questions, even if you're unsure."
+      codes: ["improve_time_management", "attempt_all_questions"]
     },
     accuracy_issues: {
-      codes: ["focus_accuracy_before_speed"],
-      message: "Prioritize accuracy over speed. Slow down and check your work."
+      codes: ["focus_accuracy_before_speed"]
     },
     mixed_difficulty: {
-      codes: ["practice_hard_questions", "bridge_to_medium"],
-      message: "You do well on easy questions. Challenge yourself with harder questions."
+      codes: ["practice_hard_questions", "bridge_to_medium"]
     }
   };
 
-  /**
-   * Analyze performance and generate targeted suggestions
-   */
   function analyzePerformance(correctCount, totalQuestions, answeredCount, unansweredCount) {
-    const result = {
-      percentage: totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0,
-      attemptedAccuracy: answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0,
-      answerRate: totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0
-    };
+    var percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    var attemptedAccuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
+    var answerRate = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
 
+    return {
+      percentage: percentage,
+      attemptedAccuracy: attemptedAccuracy,
+      answerRate: answerRate
+    };
+  }
+
+  function removeDuplicates(arr) {
+    var seen = {};
+    var result = [];
+    for (var i = 0; i < arr.length; i++) {
+      if (!seen[arr[i]]) {
+        seen[arr[i]] = true;
+        result.push(arr[i]);
+      }
+    }
     return result;
   }
 
-  /**
-   * Select appropriate suggestions based on performance
-   */
   function generateSuggestions(correctCount, totalQuestions, answeredCount, unansweredCount) {
-    const analysis = analyzePerformance(correctCount, totalQuestions, answeredCount, unansweredCount);
-    const suggestions = [];
+    var analysis = analyzePerformance(correctCount, totalQuestions, answeredCount, unansweredCount);
+    var suggestions = [];
 
     console.log("🔍 SUGGESTION ENGINE ANALYSIS:", {
+      correctCount: correctCount,
+      totalQuestions: totalQuestions,
+      answeredCount: answeredCount,
+      unansweredCount: unansweredCount,
       percentage: analysis.percentage,
       attemptedAccuracy: analysis.attemptedAccuracy,
-      answerRate: analysis.answerRate,
-      unansweredCount: unansweredCount
+      answerRate: analysis.answerRate
     });
 
-    // Performance-based suggestions
+    // Performance-based suggestions (ALWAYS add at least one)
     if (analysis.percentage >= 75) {
-      suggestions.push(...SUGGESTION_DATABASE.high_performance.codes);
+      suggestions = suggestions.concat(SUGGESTION_DATABASE.high_performance.codes);
     } else if (analysis.percentage >= 60) {
-      suggestions.push(...SUGGESTION_DATABASE.good_performance.codes);
+      suggestions = suggestions.concat(SUGGESTION_DATABASE.good_performance.codes);
     } else if (analysis.percentage >= 45) {
-      suggestions.push(...SUGGESTION_DATABASE.average_performance.codes);
+      suggestions = suggestions.concat(SUGGESTION_DATABASE.average_performance.codes);
     } else {
-      suggestions.push(...SUGGESTION_DATABASE.low_performance.codes);
+      suggestions = suggestions.concat(SUGGESTION_DATABASE.low_performance.codes);
     }
 
     // Time management issues
-    if (unansweredCount > totalQuestions * 0.15) {
-      if (!suggestions.includes("improve_time_management")) {
+    if (totalQuestions > 0 && unansweredCount > totalQuestions * 0.15) {
+      var hasTimeManagement = false;
+      for (var i = 0; i < suggestions.length; i++) {
+        if (suggestions[i] === "improve_time_management") {
+          hasTimeManagement = true;
+          break;
+        }
+      }
+      if (!hasTimeManagement) {
         suggestions.push("improve_time_management");
         suggestions.push("attempt_all_questions");
       }
@@ -86,29 +92,26 @@
 
     // Accuracy vs speed issues
     if (answeredCount >= totalQuestions - 1 && analysis.attemptedAccuracy < 60) {
-      if (!suggestions.includes("focus_accuracy_before_speed")) {
+      var hasAccuracy = false;
+      for (var j = 0; j < suggestions.length; j++) {
+        if (suggestions[j] === "focus_accuracy_before_speed") {
+          hasAccuracy = true;
+          break;
+        }
+      }
+      if (!hasAccuracy) {
         suggestions.push("focus_accuracy_before_speed");
       }
     }
 
-    // Difficulty level suggestions
-    if (analysis.percentage < 50 && analysis.attemptedAccuracy > 70) {
-      if (!suggestions.includes("practice_hard_questions")) {
-        suggestions.push("practice_hard_questions");
-      }
-    }
-
     // Remove duplicates and limit to 5
-    const uniqueSuggestions = [...new Set(suggestions)].slice(0, 5);
+    var uniqueSuggestions = removeDuplicates(suggestions).slice(0, 5);
 
     console.log("✅ GENERATED SUGGESTIONS:", uniqueSuggestions);
 
     return uniqueSuggestions;
   }
 
-  /**
-   * Get performance status code
-   */
   function getPerformanceStatus(percentage) {
     if (percentage >= 75) return "strong_performance";
     if (percentage >= 60) return "good_progress";
@@ -116,17 +119,14 @@
     return "needs_improvement";
   }
 
-  /**
-   * Build complete summary with suggestions
-   */
   function buildSummaryWithSuggestions(correctCount, totalQuestions, answeredCount, submittedAt) {
-    const unansweredCount = Math.max(totalQuestions - answeredCount, 0);
-    const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
-    const attemptedAccuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
+    var unansweredCount = Math.max(totalQuestions - answeredCount, 0);
+    var percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    var attemptedAccuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
 
-    const suggestionCodes = generateSuggestions(correctCount, totalQuestions, answeredCount, unansweredCount);
+    var suggestionCodes = generateSuggestions(correctCount, totalQuestions, answeredCount, unansweredCount);
 
-    const summary = {
+    var summary = {
       score: correctCount,
       correctCount: correctCount,
       answeredCount: answeredCount,
