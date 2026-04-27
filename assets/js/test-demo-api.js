@@ -2,24 +2,9 @@
   "use strict";
 
   var params = new URLSearchParams(window.location.search || "");
-  var isDemoRequested = params.get("demo") === "1";
-  
-  // Auto-enable demo mode if:
-  // 1. Explicitly requested with ?demo=1
-  // 2. Running on GitHub Pages (visionedudomain.github.io)
-  // 3. No backend URL is configured
-  var isGitHubPages = window.location.hostname.includes("github.io");
-  var backendUrl = (window.VisionFirebaseConfig || {}).backendBaseUrl || "";
-  var shouldUseDemo = isDemoRequested || isGitHubPages || !backendUrl;
-  
-  if (!shouldUseDemo) {
+  if (params.get("demo") !== "1") {
     return;
   }
-
-  console.log("🎮 Demo mode activated. Reason:", 
-    isDemoRequested ? "?demo=1 parameter" : 
-    isGitHubPages ? "GitHub Pages detected" : 
-    "No backend URL configured");
 
   var DEMO_SESSION_KEY = "vision_test_demo_session_v1";
   var DEMO_ATTEMPT_KEY = "vision_test_demo_attempt_v1";

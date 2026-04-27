@@ -446,12 +446,8 @@
 
   document.addEventListener("DOMContentLoaded", async function () {
     if (!window.VisionTestApi) {
-      console.error("❌ VisionTestApi not available");
       return;
     }
-
-    console.log("🎯 Test Portal Loading");
-    console.log("📱 Demo Mode?", window.VisionTestApi.isDemoMode && window.VisionTestApi.isDemoMode() ? "YES ✅" : "NO");
 
     var yearElement = byId("year");
     if (yearElement) {
