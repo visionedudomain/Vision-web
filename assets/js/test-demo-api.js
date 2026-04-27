@@ -632,6 +632,9 @@
   }
 
   window.VisionTestApi = {
+    getBackendBaseUrl: function () {
+      return ""; // Demo mode doesn't use backend
+    },
     isDemoMode: function () {
       return true;
     },
@@ -651,6 +654,37 @@
     submitAttempt: submitAttempt,
     resetDemoAttempt: function () {
       clearAttempt();
+    },
+    approveStudent: async function (payload) {
+      console.log("Demo Mode: Student approval request", payload);
+      return { ok: true, message: "Student approved in demo mode" };
+    },
+    bulkApproveStudents: async function (rows) {
+      console.log("Demo Mode: Bulk approval", rows);
+      return { ok: true, approved: rows.length };
+    },
+    resetStudentPassword: async function (payload) {
+      console.log("Demo Mode: Password reset", payload);
+      return { ok: true, message: "Password reset in demo mode" };
+    },
+    requestRewrite: async function (payload) {
+      console.log("Demo Mode: Rewrite request submitted", payload);
+      return {
+        ok: true,
+        message: "Rewrite request submitted successfully. (Demo mode - no actual processing)"
+      };
+    },
+    getRewriteRequests: async function () {
+      console.log("Demo Mode: Fetching rewrite requests");
+      return [];
+    },
+    approveRewrite: async function (payload) {
+      console.log("Demo Mode: Approved rewrite request", payload);
+      return { ok: true };
+    },
+    rejectRewrite: async function (payload) {
+      console.log("Demo Mode: Rejected rewrite request", payload);
+      return { ok: true };
     }
   };
 })();

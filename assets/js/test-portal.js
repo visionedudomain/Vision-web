@@ -528,11 +528,15 @@
     }
 
     async function requestRewrite() {
+      console.log("🔄 requestRewrite clicked");
       if (!portalState.resultSummary || !portalState.testData) {
+        console.warn("⚠️ Missing result summary or test data");
         return;
       }
       var rewriteButton = byId("requestRewriteButton");
       var rewriteStatus = byId("resultRewriteStatus");
+      
+      console.log("📝 Button:", rewriteButton, "Status element:", rewriteStatus);
       
       if (rewriteButton) {
         rewriteButton.disabled = true;
@@ -540,10 +544,15 @@
       }
       
       try {
+        console.log("📞 Calling requestRewrite API...");
+        if (!window.VisionTestApi || !window.VisionTestApi.requestRewrite) {
+          throw new Error("requestRewrite API not available");
+        }
         var result = await window.VisionTestApi.requestRewrite({
           testId: portalState.testData.id
         });
         
+        console.log("✅ Rewrite request submitted:", result);
         if (rewriteStatus) {
           rewriteStatus.textContent = t("test_rewrite_requested", "Rewrite request submitted successfully. Please wait for admin approval.");
           rewriteStatus.classList.remove("status-error");
@@ -554,6 +563,7 @@
           rewriteButton.textContent = t("test_rewrite_requested_button", "Request Sent") || "Request Sent";
         }
       } catch (error) {
+        console.error("❌ Rewrite request failed:", error);
         if (rewriteStatus) {
           var errorMsg = error && error.message ? error.message : "Unable to submit rewrite request.";
           rewriteStatus.textContent = errorMsg;
@@ -568,8 +578,10 @@
     }
 
     var requestRewriteButton = byId("requestRewriteButton");
+    console.log("🔘 Request rewrite button found:", requestRewriteButton);
     if (requestRewriteButton) {
       requestRewriteButton.addEventListener("click", requestRewrite);
+      console.log("✅ Request rewrite button listener attached");
     }
 
     async function submitNow() {
