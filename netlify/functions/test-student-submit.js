@@ -45,7 +45,7 @@ exports.handler = async function (event) {
     const submittedAt = new Date().toISOString();
     const expiresAtTime = new Date(attempt.data.expiresAt || "").getTime();
     const timedOut = expiresAtTime && expiresAtTime <= Date.now();
-    const summary = buildSummary(result, { submittedAt: submittedAt });
+    const summary = buildSummary(result, { submittedAt: submittedAt }, testQuestions);
 
     await attempt.ref.set({
       answers,

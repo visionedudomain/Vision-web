@@ -75,7 +75,7 @@ exports.handler = async function (event) {
           unansweredCount: Number(existingAttempt.data.unansweredCount || 0),
           performanceStatusCode: existingAttempt.data.performanceStatusCode || "",
           suggestionCodes: Array.isArray(existingAttempt.data.suggestionCodes) ? existingAttempt.data.suggestionCodes : []
-        }, { submittedAt: existingAttempt.data.submittedAt || "" }),
+        }, { submittedAt: existingAttempt.data.submittedAt || "" }, publicTest.questions),
         message: "Your test has already been submitted."
       });
     }
