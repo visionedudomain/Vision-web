@@ -127,6 +127,38 @@
     element.classList.remove("hidden");
   }
 
+  function renderSuggestions(summary) {
+    var listContainer = byId("resultSuggestionsList");
+    var emptyMessage = byId("resultSuggestionsEmpty");
+    
+    if (!listContainer || !emptyMessage) {
+      return;
+    }
+
+    var suggestionCodes = Array.isArray(summary.suggestionCodes) ? summary.suggestionCodes : [];
+    
+    if (suggestionCodes.length === 0) {
+      listContainer.innerHTML = "";
+      emptyMessage.classList.remove("hidden");
+      return;
+    }
+
+    listContainer.innerHTML = "";
+    emptyMessage.classList.add("hidden");
+
+    suggestionCodes.forEach(function (code) {
+      var copy = getSuggestionCopy(code);
+      if (copy.title && copy.body) {
+        var item = document.createElement("div");
+        item.className = "result-suggestion-item";
+        item.innerHTML = "" +
+          "<strong>" + copy.title + "</strong>" +
+          "<p>" + copy.body + "</p>";
+        listContainer.appendChild(item);
+      }
+    });
+  }
+
   function getPortalStateMessage(state) {
     var map = {
       no_test: "test_portal_no_test",
@@ -304,6 +336,7 @@
     setText("resultStatusValue", clean(summary.customStatusLabel) || getPerformanceStatusLabel(summary.performanceStatusCode));
     setText("resultStatusNote", clean(summary.customStatusNote) || getPerformanceStatusNote(summary.performanceStatusCode));
     renderModelInsight(summary.modelInsight);
+    renderSuggestions(summary);
   }
 
   async function autoSubmitAttempt() {
