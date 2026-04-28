@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vision Education Academy | Demo Test Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css?v=26">
+  <style>
+    .demo-badge {
+      display: inline-block;
+      background: #4CAF50;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .demo-info {
+      background: #E8F5E9;
+      border: 1px solid #4CAF50;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      color: #2E7D32;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="index.html" class="brand">
+        <span class="brand-mark brand-mark-image">
+          <img src="assets/images/new_logo.png?v=5" alt="Vision Education Academy logo">
+        </span>
+        <span>VISION EDUCATION ACADEMY</span>
+      </a>
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="test.html">Online Test</a>
+        <span class="demo-badge">DEMO</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="section">
+    <div class="container">
+      <div class="row-between portal-topbar">
+        <div>
+          <h1>Demo: Suggestion Engine & Retake Test <span class="demo-badge">Test Mode</span></h1>
+          <p>This demo showcases the suggestion engine and retake test functionality without requiring Firebase.</p>
+        </div>
+      </div>
+
+      <div class="demo-info">
+        ✅ <strong>Demo Mode Activated:</strong> This page demonstrates the suggestion engine with mock test results. All features are fully functional and ready to be tested.
+      </div>
+
+      <section id="testResultSection" class="form-card hidden">
+        <h2>Result Summary</h2>
+        <div class="result-status-card">
+          <span class="mini-label">Performance Status</span>
+          <strong id="resultStatusValue">Good Progress</strong>
+          <p id="resultStatusNote" class="form-note">Your performance shows good progress. Continue practicing to improve further.</p>
+        </div>
+        <div class="summary-grid portal-summary-grid">
+          <div class="summary-chip"><span>Score</span><strong id="resultScoreValue">12 / 20</strong></div>
+          <div class="summary-chip"><span>Correct Answers</span><strong id="resultCorrectValue">12</strong></div>
+          <div class="summary-chip"><span>Attempted</span><strong id="resultAttemptedValue">18</strong></div>
+          <div class="summary-chip"><span>Submitted At</span><strong id="resultSubmittedAtValue">28 Apr 2026, 03:45 pm</strong></div>
+        </div>
+
+        <div id="resultSuggestionsSection" class="result-suggestions-card">
+          <h3>Suggestions For Improvement</h3>
+          <div id="resultSuggestionsList" class="result-suggestions-list"></div>
+          <p id="resultSuggestionsEmpty" class="form-note hidden">Suggestions will appear here.</p>
+        </div>
+
+        <div id="resultRewriteSection" class="result-rewrite-card">
+          <p class="form-note">If you would like to retake this test, you can request approval from the admin.</p>
+          <button type="button" id="requestRewriteButton" class="btn btn-primary">Request to Retake Test</button>
+          <p id="resultRewriteStatus" class="status-text" role="status"></p>
+        </div>
+      </section>
+
+      <section class="form-card" style="margin-top: 30px; text-align: center;">
+        <h3>Ready to Test?</h3>
+        <p style="margin: 15px 0;">Click the button below to view the test result with suggestions and retake option.</p>
+        <button id="showResultButton" class="btn btn-primary" style="font-size: 16px; padding: 12px 30px;">Show Result with Suggestions</button>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year"></span> VISION EDUCATION ACADEMY. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="assets/js/suggestion-generator.js?v=1"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var SUGGESTIONS_COPY = {
+        maintain_mock_tests: {
+          title: "Maintain Consistency with Mock Tests",
+          body: "You're performing well! Keep taking regular mock tests to maintain and improve your performance."
+        },
+        review_missed_questions: {
+          title: "Review Missed Questions",
+          body: "Analyze the questions you got wrong to understand the concepts better."
+        },
+        practice_topic_sets: {
+          title: "Practice Topic-wise Sets",
+          body: "Focus on topic-based practice tests to strengthen your understanding of specific areas."
+        },
+        practice_small_sets: {
+          title: "Practice in Small Sets",
+          body: "Start with smaller practice sets (5-10 questions) to build confidence and accuracy."
+        },
+        focus_weak_subjects: {
+          title: "Focus on Weak Subjects",
+          body: "Identify subjects where you're scoring lower and dedicate extra time to practicing those areas."
+        },
+        revise_core_concepts: {
+          title: "Revise Core Concepts",
+          body: "Go back to basics and revise fundamental concepts in your weaker subjects."
+        },
+        improve_time_management: {
+          title: "Improve Time Management",
+          body: "Practice answering questions faster. Try setting time limits for each question."
+        },
+        attempt_all_questions: {
+          title: "Attempt All Questions",
+          body: "Don't leave questions unanswered. Attempt all questions, even if you're unsure."
+        },
+        focus_accuracy_before_speed: {
+          title: "Focus on Accuracy Before Speed",
+          body: "Prioritize getting correct answers over attempting more questions quickly."
+        },
+        practice_hard_questions: {
+          title: "Practice Hard Difficulty Questions",
+          body: "Challenge yourself with harder questions to improve your overall performance."
+        },
+        bridge_to_medium: {
+          title: "Bridge to Medium Level",
+          body: "After mastering easy questions, gradually move to medium and hard difficulty levels."
+        }
+      };
+
+      function getSuggestionCopy(code) {
+        return SUGGESTIONS_COPY[code] || { title: code, body: "Practice and improve in this area." };
+      }
+
+      function renderSuggestions(suggestionCodes) {
+        var listContainer = document.getElementById("resultSuggestionsList");
+        var emptyMessage = document.getElementById("resultSuggestionsEmpty");
+
+        if (!listContainer || !emptyMessage) {
+          console.warn("⚠️ Suggestion containers not found");
+          return;
+        }
+
+        if (!Array.isArray(suggestionCodes) || suggestionCodes.length === 0) {
+          listContainer.innerHTML = "";
+          emptyMessage.classList.remove("hidden");
+          return;
+        }
+
+        listContainer.innerHTML = "";
+        emptyMessage.classList.add("hidden");
+
+        var renderedCount = 0;
+        suggestionCodes.forEach(function (code) {
+          var copy = getSuggestionCopy(code);
+
+          if (copy.title || copy.body) {
+            var item = document.createElement("div");
+            item.className = "result-suggestion-item";
+            var title = copy.title || code;
+            var body = copy.body || "Practice and improve in this area.";
+            item.innerHTML = "<strong>" + title + "</strong><p>" + body + "</p>";
+            listContainer.appendChild(item);
+            renderedCount += 1;
+            console.log("✅ Rendered suggestion:", code);
+          }
+        });
+
+        console.log("✨ Total suggestions rendered:", renderedCount);
+      }
+
+      function showResult() {
+        // Hide the button section and show result
+        document.getElementById("showResultButton").parentElement.parentElement.style.display = "none";
+        document.getElementById("testResultSection").classList.remove("hidden");
+
+        // Generate suggestions using the suggestion generator
+        var suggestionCodes = window.SuggestionGenerator && window.SuggestionGenerator.generateSuggestions 
+          ? window.SuggestionGenerator.generateSuggestions(12, 20, 18, 2)
+          : [
+              "practice_topic_sets",
+              "review_missed_questions",
+              "improve_time_management"
+            ];
+
+        console.log("📊 Generated Suggestion Codes:", suggestionCodes);
+        
+        // Render suggestions
+        renderSuggestions(suggestionCodes);
+      }
+
+      function requestRewrite() {
+        var button = document.getElementById("requestRewriteButton");
+        var status = document.getElementById("resultRewriteStatus");
+
+        button.disabled = true;
+        button.textContent = "Requesting...";
+
+        // Simulate network delay
+        setTimeout(function () {
+          status.textContent = "✅ Rewrite request submitted successfully! Please wait for admin approval.";
+          status.classList.remove("status-error");
+          status.classList.add("status-success");
+          button.textContent = "Request Sent";
+        }, 1000);
+      }
+
+      // Set year
+      document.getElementById("year").textContent = String(new Date().getFullYear());
+
+      // Event listeners
+      document.getElementById("showResultButton").addEventListener("click", showResult);
+      document.getElementById("requestRewriteButton").addEventListener("click", requestRewrite);
+
+      console.log("🎮 Demo Mode Ready!");
+      console.log("✅ Suggestion Engine Loaded Successfully");
+      console.log("✅ Request rewrite button found");
+    })();
+  </script>
+</body>
+</html>
