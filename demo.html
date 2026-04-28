@@ -87,7 +87,7 @@
         </div>
       </section>
 
-      <section class="form-card" style="margin-top: 30px; text-align: center;">
+      <section id="showResultButtonSection" class="form-card" style="margin-top: 30px; text-align: center;">
         <h3>Ready to Test?</h3>
         <p style="margin: 15px 0;">Click the button below to view the test result with suggestions and retake option.</p>
         <button id="showResultButton" class="btn btn-primary" style="font-size: 16px; padding: 12px 30px;">Show Result with Suggestions</button>
@@ -196,7 +196,7 @@
 
       function showResult() {
         // Hide the button section and show result
-        document.getElementById("showResultButton").parentElement.parentElement.style.display = "none";
+        document.getElementById("showResultButtonSection").style.display = "none";
         document.getElementById("testResultSection").classList.remove("hidden");
 
         // Generate suggestions using the suggestion generator
