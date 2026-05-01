@@ -622,67 +622,74 @@
     // Rewrite Requests Table Handler
     var testRewriteRequestsBody = byId("testRewriteRequestsBody");
     if (testRewriteRequestsBody) {
-      testRewriteRequestsBody.addEventListener("click", async function (event) {
-        var button = getClosestActionButton(event.target, "data-rewrite-action");
-        if (!button) {
-          return;
+      if (!window.VisionTestApi || typeof window.VisionTestApi.supportsRewriteRequests !== "function" || !window.VisionTestApi.supportsRewriteRequests()) {
+        var rewriteSection = testRewriteRequestsBody.closest("section");
+        if (rewriteSection) {
+          rewriteSection.classList.add("hidden");
         }
-        event.preventDefault();
-        var requestId = button.getAttribute("data-rewrite-id");
-        var action = button.getAttribute("data-rewrite-action");
-
-        if (!requestId || !action) {
-          return;
-        }
-
-        try {
-          if (action === "approve") {
-            await window.VisionTestApi.approveRewrite({ requestId: requestId });
-            setStatus("testRewriteStatus", "Rewrite request approved successfully.", false);
-          } else if (action === "reject") {
-            await window.VisionTestApi.rejectRewrite({ requestId: requestId });
-            setStatus("testRewriteStatus", "Rewrite request rejected.", false);
-          }
-          // Refresh the list
-          refreshRewriteRequests();
-        } catch (error) {
-          setStatus("testRewriteStatus", error && error.message ? error.message : "Unable to process rewrite request.", true);
-        }
-      });
-
-      function refreshRewriteRequests() {
-        window.VisionTestApi.getRewriteRequests().then(function (requests) {
-          testRewriteRequestsBody.innerHTML = "";
-          if (!Array.isArray(requests) || !requests.length) {
-            testRewriteRequestsBody.innerHTML = "<tr><td colspan='6'>" + t("test_rewrite_no_requests", "No pending rewrite requests.") + "</td></tr>";
+      } else {
+        testRewriteRequestsBody.addEventListener("click", async function (event) {
+          var button = getClosestActionButton(event.target, "data-rewrite-action");
+          if (!button) {
             return;
           }
-          requests.forEach(function (req) {
-            var tr = document.createElement("tr");
-            var statusLabel = req.status === "approved" ? "Approved" : req.status === "rejected" ? "Rejected" : "Pending";
-            tr.innerHTML = "" +
-              "<td>" + (req.studentName || "-") + "</td>" +
-              "<td>" + (req.testTitle || "-") + "</td>" +
-              "<td>" + (req.score || "-") + "</td>" +
-              "<td>" + VisionStore.formatDisplayDate(req.requestedAt) + "</td>" +
-              "<td>" + statusLabel + "</td>" +
-              "<td>" +
-                (req.status === "pending" ?
-                  "<button type='button' class='btn btn-sm btn-success' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='approve'>" + t("test_btn_approve_rewrite", "Approve") + "</button>" +
-                  "<button type='button' class='btn btn-sm btn-danger' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='reject'>" + t("test_btn_reject_rewrite", "Reject") + "</button>"
-                  : "-"
-                ) +
-              "</td>";
-            testRewriteRequestsBody.appendChild(tr);
-          });
-        }).catch(function (error) {
-          setStatus("testRewriteStatus", error && error.message ? error.message : "Unable to load rewrite requests.", true);
-        });
-      }
+          event.preventDefault();
+          var requestId = button.getAttribute("data-rewrite-id");
+          var action = button.getAttribute("data-rewrite-action");
 
-      // Load rewrite requests on dashboard load
-      if (unsubscribeNews === null) {
-        refreshRewriteRequests();
+          if (!requestId || !action) {
+            return;
+          }
+
+          try {
+            if (action === "approve") {
+              await window.VisionTestApi.approveRewrite({ requestId: requestId });
+              setStatus("testRewriteStatus", "Rewrite request approved successfully.", false);
+            } else if (action === "reject") {
+              await window.VisionTestApi.rejectRewrite({ requestId: requestId });
+              setStatus("testRewriteStatus", "Rewrite request rejected.", false);
+            }
+            // Refresh the list
+            refreshRewriteRequests();
+          } catch (error) {
+            setStatus("testRewriteStatus", error && error.message ? error.message : "Unable to process rewrite request.", true);
+          }
+        });
+
+        function refreshRewriteRequests() {
+          window.VisionTestApi.getRewriteRequests().then(function (requests) {
+            testRewriteRequestsBody.innerHTML = "";
+            if (!Array.isArray(requests) || !requests.length) {
+              testRewriteRequestsBody.innerHTML = "<tr><td colspan='6'>" + t("test_rewrite_no_requests", "No pending rewrite requests.") + "</td></tr>";
+              return;
+            }
+            requests.forEach(function (req) {
+              var tr = document.createElement("tr");
+              var statusLabel = req.status === "approved" ? "Approved" : req.status === "rejected" ? "Rejected" : "Pending";
+              tr.innerHTML = "" +
+                "<td>" + (req.studentName || "-") + "</td>" +
+                "<td>" + (req.testTitle || "-") + "</td>" +
+                "<td>" + (req.score || "-") + "</td>" +
+                "<td>" + VisionStore.formatDisplayDate(req.requestedAt) + "</td>" +
+                "<td>" + statusLabel + "</td>" +
+                "<td>" +
+                  (req.status === "pending" ?
+                    "<button type='button' class='btn btn-sm btn-success' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='approve'>" + t("test_btn_approve_rewrite", "Approve") + "</button>" +
+                    "<button type='button' class='btn btn-sm btn-danger' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='reject'>" + t("test_btn_reject_rewrite", "Reject") + "</button>"
+                    : "-"
+                  ) +
+                "</td>";
+              testRewriteRequestsBody.appendChild(tr);
+            });
+          }).catch(function (error) {
+            setStatus("testRewriteStatus", error && error.message ? error.message : "Unable to load rewrite requests.", true);
+          });
+        }
+
+        // Load rewrite requests on dashboard load
+        if (unsubscribeNews === null) {
+          refreshRewriteRequests();
+        }
       }
     }
 

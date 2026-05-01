@@ -324,6 +324,10 @@
     return new Date(Math.min(closeTime, timedEnd)).toISOString();
   }
 
+  function roundOne(value) {
+    return Math.round(Number(value || 0) * 10) / 10;
+  }
+
   function sanitizeAnswers(questions, answers) {
     var safeAnswers = answers && typeof answers === "object" ? answers : {};
     var validQuestionIds = {};
@@ -411,29 +415,130 @@
     };
   }
 
+  function buildBasicSummary(result, submittedAt) {
+    var safe = result && typeof result === "object" ? result : {};
+    var totalQuestions = Number(safe.totalQuestions || 0);
+    var correctCount = Number(safe.correctCount || 0);
+    var answeredCount = Number(safe.answeredCount || 0);
+    var unansweredCount = Math.max(totalQuestions - answeredCount, 0);
+    var percentage = totalQuestions ? roundOne((correctCount / totalQuestions) * 100) : 0;
+    var attemptedAccuracy = answeredCount ? roundOne((correctCount / answeredCount) * 100) : 0;
+    var suggestionCodes = [];
+
+    function addSuggestion(code) {
+      if (code && suggestionCodes.indexOf(code) === -1 && suggestionCodes.length < 5) {
+        suggestionCodes.push(code);
+      }
+    }
+
+    if (percentage >= 80) {
+      addSuggestion("maintain_mock_tests");
+      addSuggestion("review_missed_questions");
+    } else if (percentage >= 65) {
+      addSuggestion("practice_topic_sets");
+      addSuggestion("review_missed_questions");
+    } else if (percentage >= 50) {
+      addSuggestion("practice_small_sets");
+      addSuggestion("focus_weak_subjects");
+    } else {
+      addSuggestion("revise_core_concepts");
+      addSuggestion("practice_small_sets");
+    }
+
+    if (unansweredCount > Math.max(totalQuestions * 0.1, 1)) {
+      addSuggestion("improve_time_management");
+      addSuggestion("attempt_all_questions");
+    }
+
+    if (answeredCount >= Math.max(totalQuestions - 1, 1) && attemptedAccuracy < 60) {
+      addSuggestion("focus_accuracy_before_speed");
+    }
+
+    var performanceStatusCode = "needs_improvement";
+    if (percentage >= 80) {
+      performanceStatusCode = "strong_performance";
+    } else if (percentage >= 60) {
+      performanceStatusCode = "good_progress";
+    } else if (percentage >= 45) {
+      performanceStatusCode = "steady_progress";
+    }
+
+    return {
+      score: Number(safe.score || 0),
+      correctCount: correctCount,
+      answeredCount: answeredCount,
+      totalQuestions: totalQuestions,
+      submittedAt: clean(submittedAt),
+      percentage: percentage,
+      attemptedAccuracy: attemptedAccuracy,
+      unansweredCount: unansweredCount,
+      performanceStatusCode: performanceStatusCode,
+      suggestionCodes: suggestionCodes
+    };
+  }
+
+  function buildEnhancedAnswerSummary(result, answers, answerQuestions, submittedAt, fallbackTotalQuestions) {
+    var normalizedResult = {
+      score: Number(result && result.score || 0),
+      correctCount: Number(result && result.correctCount || 0),
+      answeredCount: Number(result && result.answeredCount || 0),
+      totalQuestions: Number(result && result.totalQuestions || fallbackTotalQuestions || 0)
+    };
+    var safeAnswers = answers && typeof answers === "object" ? JSON.parse(JSON.stringify(answers)) : {};
+    var safeQuestions = Array.isArray(answerQuestions) ? JSON.parse(JSON.stringify(answerQuestions)) : [];
+    var submittedValue = clean(submittedAt);
+
+    if (window.VisionSuggestionEngine && typeof window.VisionSuggestionEngine.buildAdvancedSummary === "function") {
+      try {
+        return window.VisionSuggestionEngine.buildAdvancedSummary(normalizedResult, safeQuestions, safeAnswers, submittedValue);
+      } catch (error) {
+        console.warn("Advanced suggestion summary failed", error);
+      }
+    }
+
+    if (window.SuggestionGenerator && typeof window.SuggestionGenerator.buildSummaryWithSuggestions === "function") {
+      try {
+        return window.SuggestionGenerator.buildSummaryWithSuggestions(
+          normalizedResult.correctCount,
+          normalizedResult.totalQuestions,
+          normalizedResult.answeredCount,
+          submittedValue
+        );
+      } catch (error) {
+        console.warn("Fallback suggestion generator failed", error);
+      }
+    }
+
+    return buildBasicSummary(normalizedResult, submittedValue);
+  }
+
   async function getAnswerSummary(testId, answers, submittedAt, fallbackTotalQuestions) {
     await ensureStudentFirebase();
     var answerKeySnapshot = await studentState.api.getDoc(studentState.api.doc(studentState.db, ANSWER_KEYS_COLLECTION, clean(testId)));
     var answerQuestions = answerKeySnapshot.exists() ? (answerKeySnapshot.data().questions || []) : [];
     var result = scoreAnswers(answerQuestions, answers);
-    return {
-      score: result.score,
-      correctCount: result.correctCount,
-      answeredCount: result.answeredCount,
-      totalQuestions: result.totalQuestions || Number(fallbackTotalQuestions || 0),
-      submittedAt: clean(submittedAt)
-    };
+    return buildEnhancedAnswerSummary(result, answers, answerQuestions, submittedAt, fallbackTotalQuestions);
   }
 
   async function finalizeExpiredAttempt(attemptRef, attemptData) {
     var submittedAt = clean(attemptData.submittedAt) || new Date().toISOString();
+    var summary = await getAnswerSummary(attemptData.testId, attemptData.answers || {}, submittedAt, attemptData.totalQuestions);
     await studentState.api.setDoc(attemptRef, {
+      score: summary.score,
+      correctCount: summary.correctCount,
+      answeredCount: summary.answeredCount,
+      totalQuestions: summary.totalQuestions,
+      percentage: summary.percentage,
+      attemptedAccuracy: summary.attemptedAccuracy,
+      unansweredCount: summary.unansweredCount,
+      performanceStatusCode: summary.performanceStatusCode,
+      suggestionCodes: summary.suggestionCodes,
       status: "auto_submitted",
       submittedAt: submittedAt,
       submittedAtMs: Date.now(),
       updatedAt: new Date().toISOString()
     }, { merge: true });
-    return getAnswerSummary(attemptData.testId, attemptData.answers || {}, submittedAt, attemptData.totalQuestions);
+    return summary;
   }
 
   async function studentLogin(loginName, password) {
@@ -472,6 +577,12 @@
 
   async function registerStudent(payload) {
     await ensureStudentFirebase();
+    
+    // Ensure no previous student session is active, as Firestore rules require request.auth == null
+    if (studentState.currentUser) {
+      await logoutStudent();
+    }
+
     var safe = payload && typeof payload === "object" ? payload : {};
     var displayName = clean(safe.displayName);
     var loginName = clean(safe.loginName);
@@ -716,10 +827,20 @@
     var submittedAt = new Date().toISOString();
     var timedOut = new Date(attempt.expiresAt).getTime() <= Date.now();
     var finalStatus = safePayload.autoSubmit || timedOut ? "auto_submitted" : "submitted";
+    var summary = await getAnswerSummary(publicTest.id, answers, submittedAt, publicTest.questionCount);
 
     try {
       await studentState.api.setDoc(attemptRef, {
         answers: answers,
+        score: summary.score,
+        correctCount: summary.correctCount,
+        answeredCount: summary.answeredCount,
+        totalQuestions: summary.totalQuestions,
+        percentage: summary.percentage,
+        attemptedAccuracy: summary.attemptedAccuracy,
+        unansweredCount: summary.unansweredCount,
+        performanceStatusCode: summary.performanceStatusCode,
+        suggestionCodes: summary.suggestionCodes,
         submittedAt: submittedAt,
         submittedAtMs: new Date(submittedAt).getTime(),
         status: finalStatus,
@@ -731,7 +852,7 @@
 
     return {
       ok: true,
-      summary: await getAnswerSummary(publicTest.id, answers, submittedAt, publicTest.questionCount)
+      summary: summary
     };
   }
 
@@ -748,6 +869,9 @@
   window.VisionTestApi = {
     getBackendBaseUrl: function () {
       return clean((window.VisionFirebaseConfig || {}).backendBaseUrl || "");
+    },
+    supportsRewriteRequests: function () {
+      return false;
     },
     getStudentSessionToken: getStudentSessionToken,
     setStudentSessionToken: setStudentSessionToken,
@@ -773,54 +897,17 @@
     getActiveTest: getActiveTest,
     startAttempt: startAttempt,
     submitAttempt: submitAttempt,
-    requestRewrite: async function (payload) {
-      if (!window.VisionTestStore) {
-        throw createError("Test store not ready", "NO_STORE");
-      }
-      var safe = payload && typeof payload === "object" ? payload : {};
-      var sessionToken = getStudentSessionToken();
-      if (!sessionToken) {
-        throw createError("No active session", "SESSION_MISSING");
-      }
-      var baseUrl = this.getBackendBaseUrl();
-      if (!baseUrl) {
-        throw createError("Backend URL not configured", "CONFIG_MISSING");
-      }
-      try {
-        var response = await window.fetch(baseUrl + "/test-student-rewrite", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + sessionToken
-          },
-          body: JSON.stringify({
-            testId: clean(safe.testId)
-          })
-        });
-        if (!response.ok) {
-          throw createError("Request failed with status " + response.status, "REWRITE_FAILED");
-        }
-        return await response.json();
-      } catch (error) {
-        if (isNetworkError(error)) {
-          throw createError("Network error: " + (error.message || "Connection failed"), "NETWORK_ERROR");
-        }
-        throw error;
-      }
+    requestRewrite: async function () {
+      throw createError("Retake requests are not enabled in this hosted version yet.", "FEATURE_UNAVAILABLE");
     },
     getRewriteRequests: async function () {
-      var store = await requireAdminStore();
-      return store.getRewriteRequests();
+      return [];
     },
-    approveRewrite: async function (payload) {
-      var store = await requireAdminStore();
-      var safe = payload && typeof payload === "object" ? payload : {};
-      return store.approveRewrite(clean(safe.requestId));
+    approveRewrite: async function () {
+      throw createError("Retake request approval is not enabled in this hosted version yet.", "FEATURE_UNAVAILABLE");
     },
-    rejectRewrite: async function (payload) {
-      var store = await requireAdminStore();
-      var safe = payload && typeof payload === "object" ? payload : {};
-      return store.rejectRewrite(clean(safe.requestId));
+    rejectRewrite: async function () {
+      throw createError("Retake request approval is not enabled in this hosted version yet.", "FEATURE_UNAVAILABLE");
     }
   };
 

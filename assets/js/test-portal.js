@@ -139,6 +139,17 @@
     element.classList.remove("hidden");
   }
 
+  function supportsRewriteRequests() {
+    return Boolean(window.VisionTestApi && typeof window.VisionTestApi.supportsRewriteRequests === "function" && window.VisionTestApi.supportsRewriteRequests());
+  }
+
+  function syncRewriteSectionVisibility() {
+    var rewriteSection = byId("resultRewriteSection");
+    if (rewriteSection) {
+      rewriteSection.classList.toggle("hidden", !supportsRewriteRequests());
+    }
+  }
+
   function renderSuggestions(summary) {
     var listContainer = byId("resultSuggestionsList");
     var emptyMessage = byId("resultSuggestionsEmpty");
@@ -361,10 +372,12 @@
     setText("resultScoreValue", String(summary.score || 0) + " / " + String(summary.totalQuestions || 0));
     setText("resultCorrectValue", String(summary.correctCount || 0));
     setText("resultAttemptedValue", String(summary.answeredCount || 0));
+    setText("resultPercentageValue", clean(summary.percentage) ? String(summary.percentage) + "%" : "0%");
     setText("resultSubmittedAtValue", formatDateTime(summary.submittedAt));
     setText("resultStatusValue", clean(summary.customStatusLabel) || getPerformanceStatusLabel(summary.performanceStatusCode));
     setText("resultStatusNote", clean(summary.customStatusNote) || getPerformanceStatusNote(summary.performanceStatusCode));
     renderModelInsight(summary.modelInsight);
+    syncRewriteSectionVisibility();
     console.log("🎯 About to render suggestions...");
     renderSuggestions(summary);
   }
@@ -464,6 +477,7 @@
     setSessionVisible(false);
     setSectionVisible("testRunnerSection", false);
     setSectionVisible("testResultSection", false);
+    syncRewriteSectionVisibility();
     setStatus(t("test_portal_loading"), false);
 
     if (loginForm) {

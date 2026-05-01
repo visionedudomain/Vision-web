@@ -638,6 +638,9 @@
     isDemoMode: function () {
       return true;
     },
+    supportsRewriteRequests: function () {
+      return true;
+    },
     getDemoCredentials: function () {
       return clone(DEMO_LOGIN);
     },
