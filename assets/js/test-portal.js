@@ -463,6 +463,8 @@
     }
 
     if (payload.state === "submitted" && payload.summary) {
+      portalState.testData = payload.test || null;
+      portalState.attemptData = null;
       renderResult(payload.summary);
       setStatus(getPortalStateMessage(payload.state), false);
       return;
@@ -609,7 +611,7 @@
           throw new Error("requestRewrite API not available");
         }
         var result = await window.VisionTestApi.requestRewrite({
-          testId: portalState.testData.id
+          testId: (portalState.testData || (portalState.activePayload && portalState.activePayload.test) || {}).id
         });
         
         console.log("✅ Rewrite request submitted:", result);
