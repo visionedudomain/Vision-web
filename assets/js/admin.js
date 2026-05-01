@@ -686,8 +686,11 @@
           });
         }
 
-        // Load rewrite requests on dashboard load
-        if (unsubscribeNews === null) {
+        if (window.VisionTestStore && typeof window.VisionTestStore.subscribeAttempts === "function") {
+          window.VisionTestStore.subscribeAttempts(function () {
+            refreshRewriteRequests();
+          });
+        } else if (unsubscribeNews === null) {
           refreshRewriteRequests();
         }
       }

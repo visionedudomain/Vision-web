@@ -143,10 +143,56 @@
     return Boolean(window.VisionTestApi && typeof window.VisionTestApi.supportsRewriteRequests === "function" && window.VisionTestApi.supportsRewriteRequests());
   }
 
-  function syncRewriteSectionVisibility() {
+  function syncRewriteSectionVisibility(summary) {
     var rewriteSection = byId("resultRewriteSection");
+    var rewriteButton = byId("requestRewriteButton");
+    var rewriteStatus = byId("resultRewriteStatus");
+    var requestStatus = clean(summary && summary.rewriteRequestStatus);
+
     if (rewriteSection) {
       rewriteSection.classList.toggle("hidden", !supportsRewriteRequests());
+    }
+    if (!supportsRewriteRequests()) {
+      return;
+    }
+
+    if (rewriteButton) {
+      rewriteButton.disabled = false;
+      rewriteButton.textContent = t("test_btn_request_rewrite", "Request to Retake Test");
+    }
+
+    if (rewriteStatus) {
+      rewriteStatus.textContent = "";
+      rewriteStatus.classList.remove("status-success", "status-error");
+    }
+
+    if (requestStatus === "pending") {
+      if (rewriteButton) {
+        rewriteButton.disabled = true;
+        rewriteButton.textContent = t("test_rewrite_requested_button", "Request Sent");
+      }
+      if (rewriteStatus) {
+        rewriteStatus.textContent = t("test_rewrite_requested", "Rewrite request submitted successfully. Please wait for admin approval.");
+        rewriteStatus.classList.add("status-success");
+      }
+      return;
+    }
+
+    if (requestStatus === "approved") {
+      if (rewriteButton) {
+        rewriteButton.disabled = true;
+        rewriteButton.textContent = t("test_rewrite_requested_button", "Request Sent");
+      }
+      if (rewriteStatus) {
+        rewriteStatus.textContent = t("test_rewrite_approved_ready", "Your retest has already been approved. Log in again and start the test.");
+        rewriteStatus.classList.add("status-success");
+      }
+      return;
+    }
+
+    if (requestStatus === "rejected" && rewriteStatus) {
+      rewriteStatus.textContent = t("test_rewrite_rejected", "Your previous retest request was rejected. You can request again if needed.");
+      rewriteStatus.classList.add("status-error");
     }
   }
 
@@ -377,7 +423,7 @@
     setText("resultStatusValue", clean(summary.customStatusLabel) || getPerformanceStatusLabel(summary.performanceStatusCode));
     setText("resultStatusNote", clean(summary.customStatusNote) || getPerformanceStatusNote(summary.performanceStatusCode));
     renderModelInsight(summary.modelInsight);
-    syncRewriteSectionVisibility();
+    syncRewriteSectionVisibility(summary);
     console.log("🎯 About to render suggestions...");
     renderSuggestions(summary);
   }
@@ -477,7 +523,7 @@
     setSessionVisible(false);
     setSectionVisible("testRunnerSection", false);
     setSectionVisible("testResultSection", false);
-    syncRewriteSectionVisibility();
+    syncRewriteSectionVisibility(null);
     setStatus(t("test_portal_loading"), false);
 
     if (loginForm) {
@@ -567,6 +613,8 @@
         });
         
         console.log("✅ Rewrite request submitted:", result);
+        portalState.resultSummary = portalState.resultSummary || {};
+        portalState.resultSummary.rewriteRequestStatus = "pending";
         if (rewriteStatus) {
           rewriteStatus.textContent = t("test_rewrite_requested", "Rewrite request submitted successfully. Please wait for admin approval.");
           rewriteStatus.classList.remove("status-error");
@@ -576,6 +624,7 @@
           rewriteButton.disabled = true;
           rewriteButton.textContent = t("test_rewrite_requested_button", "Request Sent") || "Request Sent";
         }
+        syncRewriteSectionVisibility(portalState.resultSummary);
       } catch (error) {
         console.error("❌ Rewrite request failed:", error);
         if (rewriteStatus) {

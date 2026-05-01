@@ -999,6 +999,7 @@
           "<td><div class='table-actions'>" +
           "<button type='button' class='btn btn-outline btn-small' data-reset-student-password='" + student.id + "'>" + t("test_btn_reset_password") + "</button>" +
           "<button type='button' class='btn " + (student.status === "inactive" ? "btn-primary" : "btn-danger") + " btn-small' data-update-student-status='" + student.id + "' data-next-status='" + (student.status === "inactive" ? "approved" : "inactive") + "'>" + (student.status === "inactive" ? t("test_btn_activate") : t("test_btn_deactivate")) + "</button>" +
+          "<button type='button' class='btn btn-danger btn-small' data-delete-student='" + student.id + "'>" + t("test_btn_delete_student", "Delete Student") + "</button>" +
           "</div><span class='table-subtext'>" + t("test_th_password_updated") + ": " + window.VisionTestStore.formatDateTime(student.passwordUpdatedAt || student.approvedAt || student.updatedAt) + "</span></td>";
         studentsBody.appendChild(row);
       });
@@ -1229,6 +1230,7 @@
       studentsBody.addEventListener("click", async function (event) {
         var resetPasswordButton = event.target.closest("button[data-reset-student-password]");
         var statusButton = event.target.closest("button[data-update-student-status]");
+        var deleteStudentButton = event.target.closest("button[data-delete-student]");
         if (resetPasswordButton) {
           var nextPassword = clean(window.prompt(t("test_prompt_new_password"), ""));
           if (!nextPassword) {
@@ -1246,6 +1248,20 @@
             setStatus("testStudentsStatus", t("test_status_password_reset"), false);
           } catch (error) {
             setStatus("testStudentsStatus", error && error.message ? error.message : "Unable to reset student password.", true);
+          }
+          return;
+        }
+        if (deleteStudentButton) {
+          if (!window.confirm(t("test_prompt_confirm_delete_student", "Delete this student from the academy test records? Their access and test attempts will be removed."))) {
+            return;
+          }
+          try {
+            await window.VisionTestApi.deleteStudent({
+              studentId: deleteStudentButton.getAttribute("data-delete-student")
+            });
+            setStatus("testStudentsStatus", t("test_status_student_deleted", "Student deleted successfully."), false);
+          } catch (error) {
+            setStatus("testStudentsStatus", error && error.message ? error.message : "Unable to delete student.", true);
           }
           return;
         }

@@ -441,7 +441,13 @@
       correctCount: Number(data.correctCount || 0),
       answeredCount: Number(data.answeredCount || 0),
       totalQuestions: Number(data.totalQuestions || 0),
-      status: normalizeStatus(data.status, "started")
+      status: normalizeStatus(data.status, "started"),
+      rewriteRequestStatus: normalizeStatus(data.rewriteRequestStatus, ""),
+      rewriteRequestedAt: data.rewriteRequestedAt || "",
+      rewriteRequestedAtMs: Number(data.rewriteRequestedAtMs || 0),
+      rewriteReviewedAt: data.rewriteReviewedAt || "",
+      rewriteReviewedAtMs: Number(data.rewriteReviewedAtMs || 0),
+      rewriteReviewedBy: clean(data.rewriteReviewedBy)
     };
   }
 
@@ -806,6 +812,67 @@
     };
   }
 
+  async function deleteStudent(studentId) {
+    await readyPromise;
+    assertConfigured();
+    assertAdminSession();
+    var targetId = clean(studentId);
+    if (!targetId) {
+      throw new Error("Student record not found.");
+    }
+
+    var studentRef = state.api.doc(state.db, STUDENTS_COLLECTION, targetId);
+    var studentSnapshot = await state.api.getDoc(studentRef);
+    if (!studentSnapshot.exists()) {
+      throw new Error("Student record not found.");
+    }
+
+    var student = mapStudentDocument(studentSnapshot);
+    var registrationRef = student.registrationId ? state.api.doc(state.db, REGISTRATIONS_COLLECTION, student.registrationId) : null;
+    var now = new Date().toISOString();
+
+    var deleteBatch = state.api.writeBatch(state.db);
+    deleteBatch.delete(studentRef);
+
+    if (registrationRef) {
+      deleteBatch.delete(registrationRef);
+    }
+
+    if (student.loginNameNormalized) {
+      deleteBatch.delete(state.api.doc(state.db, LOGIN_INDEX_COLLECTION, student.loginNameNormalized));
+    }
+
+    await deleteBatch.commit();
+
+    while (true) {
+      var attemptsSnapshot = await state.api.getDocs(state.api.query(
+        state.api.collection(state.db, ATTEMPTS_COLLECTION),
+        state.api.where("studentId", "==", targetId),
+        state.api.limit(200)
+      ));
+
+      if (attemptsSnapshot.empty) {
+        break;
+      }
+
+      var attemptsBatch = state.api.writeBatch(state.db);
+      attemptsSnapshot.docs.forEach(function (docSnapshot) {
+        attemptsBatch.delete(docSnapshot.ref);
+      });
+      await attemptsBatch.commit();
+
+      if (attemptsSnapshot.docs.length < 200) {
+        break;
+      }
+    }
+
+    return {
+      ok: true,
+      studentId: targetId,
+      deletedAt: now
+    };
+  }
+
   async function clearAttempts() {
     await readyPromise;
     assertConfigured();
@@ -1007,6 +1074,105 @@
     return state.currentUser.getIdToken(Boolean(forceRefresh));
   }
 
+  async function getRewriteRequests() {
+    await readyPromise;
+    if (!state.configured || !isAdminUser(state.currentUser)) {
+      return [];
+    }
+
+    return getAttempts().filter(function (attempt) {
+      return Boolean(clean(attempt.rewriteRequestStatus));
+    }).sort(function (left, right) {
+      return Number(right.rewriteRequestedAtMs || 0) - Number(left.rewriteRequestedAtMs || 0);
+    }).map(function (attempt) {
+      return {
+        id: attempt.id,
+        studentId: attempt.studentId,
+        studentName: attempt.studentDisplayName,
+        studentLoginName: attempt.studentLoginName,
+        testId: attempt.testId,
+        testTitle: attempt.testTitle,
+        score: String(attempt.score || 0) + " / " + String(attempt.totalQuestions || 0),
+        requestedAt: attempt.rewriteRequestedAt || "",
+        reviewedAt: attempt.rewriteReviewedAt || "",
+        reviewedBy: attempt.rewriteReviewedBy || "",
+        status: attempt.rewriteRequestStatus || "pending"
+      };
+    });
+  }
+
+  async function approveRewrite(requestId) {
+    await readyPromise;
+    assertConfigured();
+    assertAdminSession();
+    var targetId = clean(requestId);
+    if (!targetId) {
+      throw new Error("Rewrite request not found.");
+    }
+
+    var attemptRef = state.api.doc(state.db, ATTEMPTS_COLLECTION, targetId);
+    var attemptSnapshot = await state.api.getDoc(attemptRef);
+    if (!attemptSnapshot.exists()) {
+      throw new Error("Rewrite request not found.");
+    }
+
+    var attempt = mapAttemptDocument(attemptSnapshot);
+    if (attempt.rewriteRequestStatus !== "pending") {
+      throw new Error("Only pending retest requests can be approved.");
+    }
+
+    var now = new Date().toISOString();
+    await state.api.setDoc(attemptRef, {
+      rewriteRequestStatus: "approved",
+      rewriteReviewedAt: now,
+      rewriteReviewedAtMs: Date.now(),
+      rewriteReviewedBy: clean(state.currentUser && state.currentUser.email),
+      updatedAt: now
+    }, { merge: true });
+
+    return {
+      ok: true,
+      requestId: targetId,
+      reviewedAt: now
+    };
+  }
+
+  async function rejectRewrite(requestId) {
+    await readyPromise;
+    assertConfigured();
+    assertAdminSession();
+    var targetId = clean(requestId);
+    if (!targetId) {
+      throw new Error("Rewrite request not found.");
+    }
+
+    var attemptRef = state.api.doc(state.db, ATTEMPTS_COLLECTION, targetId);
+    var attemptSnapshot = await state.api.getDoc(attemptRef);
+    if (!attemptSnapshot.exists()) {
+      throw new Error("Rewrite request not found.");
+    }
+
+    var attempt = mapAttemptDocument(attemptSnapshot);
+    if (attempt.rewriteRequestStatus !== "pending") {
+      throw new Error("Only pending retest requests can be rejected.");
+    }
+
+    var now = new Date().toISOString();
+    await state.api.setDoc(attemptRef, {
+      rewriteRequestStatus: "rejected",
+      rewriteReviewedAt: now,
+      rewriteReviewedAtMs: Date.now(),
+      rewriteReviewedBy: clean(state.currentUser && state.currentUser.email),
+      updatedAt: now
+    }, { merge: true });
+
+    return {
+      ok: true,
+      requestId: targetId,
+      reviewedAt: now
+    };
+  }
+
   window.VisionTestStore = {
     ready: function () { return readyPromise; },
     getRegistrations: getRegistrations,
@@ -1024,8 +1190,12 @@
     approveStudent: approveStudent,
     bulkApproveStudents: bulkApproveStudents,
     updateStudentStatus: updateStudentStatus,
+    deleteStudent: deleteStudent,
     resetStudentPassword: resetStudentPassword,
     clearAttempts: clearAttempts,
+    getRewriteRequests: getRewriteRequests,
+    approveRewrite: approveRewrite,
+    rejectRewrite: rejectRewrite,
     getAdminIdToken: getAdminIdToken,
     normalizeLoginName: normalizeLoginName,
     formatDateTime: formatDateTime

@@ -285,7 +285,13 @@
       submittedAtMs: Number(data.submittedAtMs || 0),
       answers: data.answers && typeof data.answers === "object" ? JSON.parse(JSON.stringify(data.answers)) : {},
       status: clean(data.status) || "started",
-      totalQuestions: Number(data.totalQuestions || 0)
+      totalQuestions: Number(data.totalQuestions || 0),
+      rewriteRequestStatus: clean(data.rewriteRequestStatus),
+      rewriteRequestedAt: clean(data.rewriteRequestedAt),
+      rewriteRequestedAtMs: Number(data.rewriteRequestedAtMs || 0),
+      rewriteReviewedAt: clean(data.rewriteReviewedAt),
+      rewriteReviewedAtMs: Number(data.rewriteReviewedAtMs || 0),
+      rewriteReviewedBy: clean(data.rewriteReviewedBy)
     };
   }
 
@@ -512,6 +518,15 @@
     return buildBasicSummary(normalizedResult, submittedValue);
   }
 
+  function decorateSummaryWithRewriteRequest(summary, attempt) {
+    var safeSummary = summary && typeof summary === "object" ? summary : {};
+    var safeAttempt = attempt && typeof attempt === "object" ? attempt : {};
+    safeSummary.rewriteRequestStatus = clean(safeAttempt.rewriteRequestStatus);
+    safeSummary.rewriteRequestedAt = clean(safeAttempt.rewriteRequestedAt);
+    safeSummary.rewriteReviewedAt = clean(safeAttempt.rewriteReviewedAt);
+    return safeSummary;
+  }
+
   async function getAnswerSummary(testId, answers, submittedAt, fallbackTotalQuestions) {
     await ensureStudentFirebase();
     var answerKeySnapshot = await studentState.api.getDoc(studentState.api.doc(studentState.db, ANSWER_KEYS_COLLECTION, clean(testId)));
@@ -676,13 +691,43 @@
 
     if (attemptSnapshot && attemptSnapshot.exists()) {
       var attempt = mapAttemptDocument(attemptSnapshot);
+      if (attempt.rewriteRequestStatus === "approved") {
+        if (now < opensAt) {
+          return {
+            ok: true,
+            state: "before_window",
+            student: sessionPayload.student,
+            test: publicTest,
+            message: "The published test is not open yet."
+          };
+        }
+
+        if (now > closesAt) {
+          return {
+            ok: true,
+            state: "window_closed",
+            student: sessionPayload.student,
+            test: publicTest,
+            message: "The published test window is closed."
+          };
+        }
+
+        return {
+          ok: true,
+          state: "ready",
+          student: sessionPayload.student,
+          test: publicTest,
+          message: "Your retest is ready to start."
+        };
+      }
+
       if (attempt.status !== "started") {
         return {
           ok: true,
           state: "submitted",
           student: sessionPayload.student,
           test: publicTest,
-          summary: await getAnswerSummary(publicTest.id, attempt.answers || {}, attempt.submittedAt, attempt.totalQuestions),
+          summary: decorateSummaryWithRewriteRequest(await getAnswerSummary(publicTest.id, attempt.answers || {}, attempt.submittedAt, attempt.totalQuestions), attempt),
           message: "Your test has already been submitted."
         };
       }
@@ -693,7 +738,7 @@
           state: "submitted",
           student: sessionPayload.student,
           test: publicTest,
-          summary: await finalizeExpiredAttempt(attemptRef, attempt),
+          summary: decorateSummaryWithRewriteRequest(await finalizeExpiredAttempt(attemptRef, attempt), attempt),
           message: "Your test has already been submitted."
         };
       }
@@ -818,7 +863,7 @@
     if (attempt.status !== "started") {
       return {
         ok: true,
-        summary: await getAnswerSummary(publicTest.id, attempt.answers || {}, attempt.submittedAt, attempt.totalQuestions)
+        summary: decorateSummaryWithRewriteRequest(await getAnswerSummary(publicTest.id, attempt.answers || {}, attempt.submittedAt, attempt.totalQuestions), attempt)
       };
     }
 
@@ -871,7 +916,7 @@
       return clean((window.VisionFirebaseConfig || {}).backendBaseUrl || "");
     },
     supportsRewriteRequests: function () {
-      return false;
+      return true;
     },
     getStudentSessionToken: getStudentSessionToken,
     setStudentSessionToken: setStudentSessionToken,
@@ -881,6 +926,11 @@
     approveStudent: async function (payload) {
       var store = await requireAdminStore();
       return store.approveStudent(payload || {});
+    },
+    deleteStudent: async function (payload) {
+      var store = await requireAdminStore();
+      var safe = payload && typeof payload === "object" ? payload : {};
+      return store.deleteStudent(clean(safe.studentId));
     },
     bulkApproveStudents: async function (rows) {
       var store = await requireAdminStore();
@@ -897,17 +947,64 @@
     getActiveTest: getActiveTest,
     startAttempt: startAttempt,
     submitAttempt: submitAttempt,
-    requestRewrite: async function () {
-      throw createError("Retake requests are not enabled in this hosted version yet.", "FEATURE_UNAVAILABLE");
+    requestRewrite: async function (payload) {
+      var activePayload = await getActiveTest();
+      if (!activePayload.test) {
+        throw createError("No active test is available right now.", "NO_ACTIVE_TEST");
+      }
+
+      var safe = payload && typeof payload === "object" ? payload : {};
+      var requestedTestId = clean(safe.testId || activePayload.test.id);
+      if (requestedTestId !== clean(activePayload.test.id)) {
+        throw createError("Retest request could not be matched to the active test.", "TEST_MISMATCH");
+      }
+
+      var attemptSnapshot = await getAttemptSnapshot(activePayload.student.id, activePayload.test.id);
+      if (!attemptSnapshot || !attemptSnapshot.exists()) {
+        throw createError("No submitted test attempt was found for this student.", "ATTEMPT_MISSING");
+      }
+
+      var attempt = mapAttemptDocument(attemptSnapshot);
+      if (attempt.status === "started") {
+        throw createError("Finish and submit the current test before requesting a retest.", "ATTEMPT_IN_PROGRESS");
+      }
+      if (attempt.rewriteRequestStatus === "pending") {
+        throw createError(window.VisionTestI18n ? window.VisionTestI18n.t("test_rewrite_already_requested", "You have already requested to retake this test.") : "You have already requested to retake this test.", "ALREADY_REQUESTED");
+      }
+      if (attempt.rewriteRequestStatus === "approved") {
+        throw createError(window.VisionTestI18n ? window.VisionTestI18n.t("test_rewrite_approved_ready", "Your retest has already been approved. Log in again and start the test.") : "Your retest has already been approved. Log in again and start the test.", "ALREADY_APPROVED");
+      }
+
+      var requestedAt = new Date().toISOString();
+      await studentState.api.setDoc(attemptSnapshot.ref, {
+        rewriteRequestStatus: "pending",
+        rewriteRequestedAt: requestedAt,
+        rewriteRequestedAtMs: Date.now(),
+        rewriteReviewedAt: "",
+        rewriteReviewedAtMs: 0,
+        rewriteReviewedBy: "",
+        updatedAt: requestedAt
+      }, { merge: true });
+
+      return {
+        ok: true,
+        status: "pending",
+        requestedAt: requestedAt
+      };
     },
     getRewriteRequests: async function () {
-      return [];
+      var store = await requireAdminStore();
+      return store.getRewriteRequests();
     },
-    approveRewrite: async function () {
-      throw createError("Retake request approval is not enabled in this hosted version yet.", "FEATURE_UNAVAILABLE");
+    approveRewrite: async function (payload) {
+      var store = await requireAdminStore();
+      var safe = payload && typeof payload === "object" ? payload : {};
+      return store.approveRewrite(clean(safe.requestId));
     },
-    rejectRewrite: async function () {
-      throw createError("Retake request approval is not enabled in this hosted version yet.", "FEATURE_UNAVAILABLE");
+    rejectRewrite: async function (payload) {
+      var store = await requireAdminStore();
+      var safe = payload && typeof payload === "object" ? payload : {};
+      return store.rejectRewrite(clean(safe.requestId));
     }
   };
 
