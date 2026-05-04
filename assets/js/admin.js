@@ -2,8 +2,18 @@
   "use strict";
 
   function t(key, fallback) {
+    var translated = "";
     if (window.VisionI18n && typeof window.VisionI18n.t === "function") {
-      return window.VisionI18n.t(key);
+      translated = window.VisionI18n.t(key);
+      if (translated && translated !== key) {
+        return translated;
+      }
+    }
+    if (window.VisionTestI18n && typeof window.VisionTestI18n.t === "function") {
+      translated = window.VisionTestI18n.t(key, "");
+      if (translated && translated !== key) {
+        return translated;
+      }
     }
     return fallback || key;
   }
@@ -644,10 +654,10 @@
           try {
             if (action === "approve") {
               await window.VisionTestApi.approveRewrite({ requestId: requestId });
-              setStatus("testRewriteStatus", "Rewrite request approved successfully.", false);
+              setStatus("testRewriteStatus", t("test_rewrite_approved_ready", "Rewrite request approved successfully."), false);
             } else if (action === "reject") {
               await window.VisionTestApi.rejectRewrite({ requestId: requestId });
-              setStatus("testRewriteStatus", "Rewrite request rejected.", false);
+              setStatus("testRewriteStatus", t("test_rewrite_rejected", "Rewrite request rejected."), false);
             }
             // Refresh the list
             refreshRewriteRequests();
@@ -665,7 +675,11 @@
             }
             requests.forEach(function (req) {
               var tr = document.createElement("tr");
-              var statusLabel = req.status === "approved" ? "Approved" : req.status === "rejected" ? "Rejected" : "Pending";
+              var statusLabel = req.status === "approved"
+                ? t("test_status_approved", "Approved")
+                : req.status === "rejected"
+                  ? t("test_status_rejected", "Rejected")
+                  : t("test_status_pending", "Pending");
               tr.innerHTML = "" +
                 "<td>" + (req.studentName || "-") + "</td>" +
                 "<td>" + (req.testTitle || "-") + "</td>" +
@@ -674,8 +688,8 @@
                 "<td>" + statusLabel + "</td>" +
                 "<td>" +
                   (req.status === "pending" ?
-                    "<button type='button' class='btn btn-sm btn-success' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='approve'>" + t("test_btn_approve_rewrite", "Approve") + "</button>" +
-                    "<button type='button' class='btn btn-sm btn-danger' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='reject'>" + t("test_btn_reject_rewrite", "Reject") + "</button>"
+                    "<button type='button' class='btn btn-sm btn-success' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='approve'>" + t("test_btn_approve_rewrite", "Approve Rewrite") + "</button>" +
+                    "<button type='button' class='btn btn-sm btn-danger' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='reject'>" + t("test_btn_reject_rewrite", "Reject Rewrite") + "</button>"
                     : "-"
                   ) +
                 "</td>";

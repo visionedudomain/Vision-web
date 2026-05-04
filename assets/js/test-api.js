@@ -123,6 +123,36 @@
     return payload;
   }
 
+  async function callAdminFunction(functionName, options) {
+    var store = await requireAdminStore();
+    if (!store || typeof store.getAdminIdToken !== "function") {
+      throw createError("Admin login is required.", "ADMIN_SESSION_MISSING");
+    }
+    var token = await store.getAdminIdToken(false);
+    var safeOptions = options && typeof options === "object" ? options : {};
+    var method = clean(safeOptions.method || "POST").toUpperCase();
+    var response = await fetch(buildBackendUrl(functionName), {
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: method === "GET" ? undefined : JSON.stringify(safeOptions.body || {})
+    });
+    var payload = {};
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = {};
+    }
+    if (!response.ok) {
+      var backendError = createErrorFromPayload(payload, safeOptions.fallbackMessage || "Request failed.");
+      backendError.status = response.status;
+      throw backendError;
+    }
+    return payload;
+  }
+
   function shouldFallbackToDirectRewrite(error) {
     var status = Number(error && error.status || 0);
     if (status === 404 || status === 405 || status >= 500) {
@@ -1233,14 +1263,58 @@
       return store.getRewriteRequests();
     },
     approveRewrite: async function (payload) {
-      var store = await requireAdminStore();
       var safe = payload && typeof payload === "object" ? payload : {};
-      return store.approveRewrite(clean(safe.requestId));
+      var requestId = clean(safe.requestId);
+      try {
+        return await callAdminFunction("test-admin-rewrite", {
+          method: "POST",
+          body: {
+            action: "approve",
+            requestId: requestId
+          },
+          fallbackMessage: "Unable to approve rewrite request right now."
+        });
+      } catch (backendError) {
+        if (!shouldFallbackToDirectRewrite(backendError)) {
+          throw backendError;
+        }
+      }
+      try {
+        var store = await requireAdminStore();
+        return store.approveRewrite(requestId);
+      } catch (error) {
+        if (isPermissionError(error)) {
+          throw createError("Rewrite approvals are blocked by Firestore permissions. Deploy the latest Netlify admin backend or publish admin-capable Firestore rules.", "REWRITE_ADMIN_PERMISSION_BLOCKED", error);
+        }
+        throw error;
+      }
     },
     rejectRewrite: async function (payload) {
-      var store = await requireAdminStore();
       var safe = payload && typeof payload === "object" ? payload : {};
-      return store.rejectRewrite(clean(safe.requestId));
+      var requestId = clean(safe.requestId);
+      try {
+        return await callAdminFunction("test-admin-rewrite", {
+          method: "POST",
+          body: {
+            action: "reject",
+            requestId: requestId
+          },
+          fallbackMessage: "Unable to reject rewrite request right now."
+        });
+      } catch (backendError) {
+        if (!shouldFallbackToDirectRewrite(backendError)) {
+          throw backendError;
+        }
+      }
+      try {
+        var store = await requireAdminStore();
+        return store.rejectRewrite(requestId);
+      } catch (error) {
+        if (isPermissionError(error)) {
+          throw createError("Rewrite approvals are blocked by Firestore permissions. Deploy the latest Netlify admin backend or publish admin-capable Firestore rules.", "REWRITE_ADMIN_PERMISSION_BLOCKED", error);
+        }
+        throw error;
+      }
     }
   };
 
