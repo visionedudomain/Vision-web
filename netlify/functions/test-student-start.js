@@ -1,10 +1,27 @@
 "use strict";
 
-const { getDb } = require("./_lib/firebase");
+const { getAuth, getDb } = require("./_lib/firebase");
 const { verifyStudentSession } = require("./_lib/test-auth");
 const { json, noContent } = require("./_lib/http");
 const { buildPublicTest, clean, getActiveTest, getAttemptDocumentId, getAttemptForStudent, clampExpiry } = require("./_lib/test-data");
 const { finalizeAttempt } = require("./_lib/test-attempts");
+
+async function resolveStudentSession(event) {
+  const authHeader = event.headers.authorization || event.headers.Authorization || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  if (!token) {
+    throw new Error("Missing student authorization token.");
+  }
+
+  try {
+    return verifyStudentSession(token);
+  } catch (sessionError) {
+    const decoded = await getAuth().verifyIdToken(token);
+    return {
+      studentId: clean(decoded && decoded.uid)
+    };
+  }
+}
 
 exports.handler = async function (event) {
   if (event.httpMethod === "OPTIONS") {
@@ -16,9 +33,7 @@ exports.handler = async function (event) {
   }
 
   try {
-    const authHeader = event.headers.authorization || event.headers.Authorization || "";
-    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-    const session = verifyStudentSession(token);
+    const session = await resolveStudentSession(event);
     const db = getDb();
 
     const studentSnapshot = await db.collection("students").doc(session.studentId).get();
@@ -69,6 +84,8 @@ exports.handler = async function (event) {
     const expiresAt = clampExpiry(now, publicTest.closesAt, publicTest.durationMinutes);
     const attemptId = getAttemptDocumentId(studentSnapshot.id, activeTestDoc.id);
     const attemptRef = db.collection("attempts").doc(attemptId);
+    const startedAt = now.toISOString();
+    const expiresAtMs = new Date(expiresAt).getTime();
     await attemptRef.set({
       studentId: studentSnapshot.id,
       studentDisplayName: clean((studentSnapshot.data() || {}).displayName),
@@ -76,15 +93,19 @@ exports.handler = async function (event) {
       testId: activeTestDoc.id,
       testTitle: publicTest.title,
       language: publicTest.language,
-      startedAt: now.toISOString(),
+      startedAt,
+      startedAtMs: now.getTime(),
       expiresAt,
+      expiresAtMs,
       submittedAt: "",
+      submittedAtMs: 0,
       status: "started",
       answers: {},
       score: 0,
       correctCount: 0,
       answeredCount: 0,
-      totalQuestions: publicTest.questionCount
+      totalQuestions: publicTest.questionCount,
+      updatedAt: startedAt
     });
 
     return json(200, {
@@ -92,7 +113,7 @@ exports.handler = async function (event) {
       test: publicTest,
       attempt: {
         id: attemptId,
-        startedAt: now.toISOString(),
+        startedAt,
         expiresAt,
         answers: {}
       }

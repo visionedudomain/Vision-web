@@ -1,15 +1,26 @@
 "use strict";
 
-const { getDb } = require("./_lib/firebase");
+const { getAuth, getDb } = require("./_lib/firebase");
 const { verifyStudentSession } = require("./_lib/test-auth");
 const { json, noContent } = require("./_lib/http");
 const { buildPublicTest, clean, getActiveTest, getAttemptForStudent } = require("./_lib/test-data");
 const { buildSummary, finalizeAttempt } = require("./_lib/test-attempts");
 
-function readStudentToken(event) {
+async function resolveStudentSession(event) {
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-  return verifyStudentSession(token);
+  if (!token) {
+    throw new Error("Missing student authorization token.");
+  }
+
+  try {
+    return verifyStudentSession(token);
+  } catch (sessionError) {
+    const decoded = await getAuth().verifyIdToken(token);
+    return {
+      studentId: clean(decoded && decoded.uid)
+    };
+  }
 }
 
 exports.handler = async function (event) {
@@ -22,7 +33,7 @@ exports.handler = async function (event) {
   }
 
   try {
-    const session = readStudentToken(event);
+    const session = await resolveStudentSession(event);
     const db = getDb();
     const studentSnapshot = await db.collection("students").doc(session.studentId).get();
     if (!studentSnapshot.exists) {
@@ -55,6 +66,21 @@ exports.handler = async function (event) {
     const existingAttempt = await getAttemptForStudent(db, studentSnapshot.id, activeTestDoc.id);
 
     if (existingAttempt && clean(existingAttempt.data.status) !== "started") {
+      const summary = buildSummary({
+        score: Number(existingAttempt.data.score || 0),
+        correctCount: Number(existingAttempt.data.correctCount || 0),
+        answeredCount: Number(existingAttempt.data.answeredCount || 0),
+        totalQuestions: Number(existingAttempt.data.totalQuestions || publicTest.questionCount || 0),
+        submittedAt: existingAttempt.data.submittedAt || "",
+        percentage: Number(existingAttempt.data.percentage || 0),
+        attemptedAccuracy: Number(existingAttempt.data.attemptedAccuracy || 0),
+        unansweredCount: Number(existingAttempt.data.unansweredCount || 0),
+        performanceStatusCode: existingAttempt.data.performanceStatusCode || "",
+        suggestionCodes: Array.isArray(existingAttempt.data.suggestionCodes) ? existingAttempt.data.suggestionCodes : []
+      }, { submittedAt: existingAttempt.data.submittedAt || "" }, publicTest.questions);
+      summary.rewriteRequestStatus = clean(existingAttempt.data.rewriteRequestStatus);
+      summary.rewriteRequestedAt = clean(existingAttempt.data.rewriteRequestedAt);
+      summary.rewriteReviewedAt = clean(existingAttempt.data.rewriteReviewedAt);
       return json(200, {
         ok: true,
         state: "submitted",
@@ -64,18 +90,7 @@ exports.handler = async function (event) {
           loginName: student.loginName
         },
         test: publicTest,
-        summary: buildSummary({
-          score: Number(existingAttempt.data.score || 0),
-          correctCount: Number(existingAttempt.data.correctCount || 0),
-          answeredCount: Number(existingAttempt.data.answeredCount || 0),
-          totalQuestions: Number(existingAttempt.data.totalQuestions || publicTest.questionCount || 0),
-          submittedAt: existingAttempt.data.submittedAt || "",
-          percentage: Number(existingAttempt.data.percentage || 0),
-          attemptedAccuracy: Number(existingAttempt.data.attemptedAccuracy || 0),
-          unansweredCount: Number(existingAttempt.data.unansweredCount || 0),
-          performanceStatusCode: existingAttempt.data.performanceStatusCode || "",
-          suggestionCodes: Array.isArray(existingAttempt.data.suggestionCodes) ? existingAttempt.data.suggestionCodes : []
-        }, { submittedAt: existingAttempt.data.submittedAt || "" }, publicTest.questions),
+        summary,
         message: "Your test has already been submitted."
       });
     }
@@ -86,6 +101,9 @@ exports.handler = async function (event) {
         const summary = await finalizeAttempt(existingAttempt.ref, existingAttempt.data, activeTestDoc.data, {
           status: "auto_submitted"
         });
+        summary.rewriteRequestStatus = clean(existingAttempt.data.rewriteRequestStatus);
+        summary.rewriteRequestedAt = clean(existingAttempt.data.rewriteRequestedAt);
+        summary.rewriteReviewedAt = clean(existingAttempt.data.rewriteReviewedAt);
         return json(200, {
           ok: true,
           state: "submitted",
@@ -146,6 +164,11 @@ exports.handler = async function (event) {
       message: "Your test is ready to start."
     });
   } catch (error) {
-    return json(401, { error: error && error.message ? error.message : "Student session is invalid." });
+    const message = error && error.message ? error.message : "Unable to load the active test.";
+    const normalizedMessage = String(message || "").toLowerCase();
+    const isAuthError = normalizedMessage.includes("student session")
+      || normalizedMessage.includes("authorization token")
+      || normalizedMessage.includes("id token");
+    return json(isAuthError ? 401 : 500, { error: message });
   }
 };

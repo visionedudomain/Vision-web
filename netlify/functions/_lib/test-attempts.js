@@ -168,6 +168,8 @@ async function finalizeAttempt(attemptRef, attemptData, testData, options) {
     performanceStatusCode: summary.performanceStatusCode,
     suggestionCodes: summary.suggestionCodes,
     submittedAt: summary.submittedAt,
+    submittedAtMs: new Date(summary.submittedAt).getTime(),
+    updatedAt: summary.submittedAt,
     status
   }, { merge: true });
 

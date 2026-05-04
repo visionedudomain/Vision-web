@@ -55,7 +55,7 @@
   function isNetworkError(error) {
     var code = clean(error && error.code).toLowerCase();
     var message = clean(error && error.message).toLowerCase();
-    return code === "network_error" || code === "auth/network-request-failed" || code === "unavailable" || /network|offline|unavailable/.test(message);
+    return code === "network_error" || code === "auth/network-request-failed" || code === "unavailable" || /network|offline|unavailable|failed to fetch|load failed/.test(message);
   }
 
   function isPermissionError(error) {
@@ -82,6 +82,53 @@
   function createErrorFromPayload(payload, fallback) {
     var body = payload && typeof payload === "object" ? payload : {};
     return createError(clean(body.error && body.error.message) || clean(body.message) || clean(body.error) || fallback || "Request failed.");
+  }
+
+  function buildBackendUrl(functionName) {
+    var baseUrl = clean((window.VisionFirebaseConfig || {}).backendBaseUrl || "").replace(/\/+$/, "");
+    return (baseUrl || "") + "/.netlify/functions/" + clean(functionName);
+  }
+
+  async function getStudentIdToken(forceRefresh) {
+    await ensureStudentFirebase();
+    if (!studentState.currentUser || typeof studentState.currentUser.getIdToken !== "function") {
+      throw createError("Student session is not active.", "SESSION_MISSING");
+    }
+    return studentState.currentUser.getIdToken(Boolean(forceRefresh));
+  }
+
+  async function callStudentFunction(functionName, options) {
+    var token = await getStudentIdToken(false);
+    var safeOptions = options && typeof options === "object" ? options : {};
+    var method = clean(safeOptions.method || "POST").toUpperCase();
+    var response = await fetch(buildBackendUrl(functionName), {
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: method === "GET" ? undefined : JSON.stringify(safeOptions.body || {})
+    });
+    var payload = {};
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = {};
+    }
+    if (!response.ok) {
+      var backendError = createErrorFromPayload(payload, safeOptions.fallbackMessage || "Request failed.");
+      backendError.status = response.status;
+      throw backendError;
+    }
+    return payload;
+  }
+
+  function shouldFallbackToDirectRewrite(error) {
+    var status = Number(error && error.status || 0);
+    if (status === 404 || status === 405 || status >= 500) {
+      return true;
+    }
+    return isNetworkError(error);
   }
 
   function getFirebaseModuleUrl(fileName) {
@@ -284,6 +331,14 @@
       submittedAt: clean(data.submittedAt),
       submittedAtMs: Number(data.submittedAtMs || 0),
       answers: data.answers && typeof data.answers === "object" ? JSON.parse(JSON.stringify(data.answers)) : {},
+      score: Number(data.score || 0),
+      correctCount: Number(data.correctCount || 0),
+      answeredCount: Number(data.answeredCount || 0),
+      percentage: Number(data.percentage || 0),
+      attemptedAccuracy: Number(data.attemptedAccuracy || 0),
+      unansweredCount: Number(data.unansweredCount || 0),
+      performanceStatusCode: clean(data.performanceStatusCode),
+      suggestionCodes: Array.isArray(data.suggestionCodes) ? data.suggestionCodes.slice() : [],
       status: clean(data.status) || "started",
       totalQuestions: Number(data.totalQuestions || 0),
       rewriteRequestStatus: clean(data.rewriteRequestStatus),
@@ -373,13 +428,28 @@
 
   async function getAttemptSnapshot(studentId, testId) {
     await ensureStudentFirebase();
+    var safeStudentId = clean(studentId);
+    var safeTestId = clean(testId);
+    if (!safeStudentId || !safeTestId) {
+      return null;
+    }
     var snapshot = await studentState.api.getDocs(studentState.api.query(
       studentState.api.collection(studentState.db, ATTEMPTS_COLLECTION),
-      studentState.api.where("studentId", "==", clean(studentId)),
-      studentState.api.where("testId", "==", clean(testId)),
-      studentState.api.limit(1)
+      studentState.api.where("studentId", "==", safeStudentId)
     ));
-    return snapshot.empty ? null : snapshot.docs[0];
+    if (snapshot.empty) {
+      return null;
+    }
+    var matchedDoc = null;
+    snapshot.docs.some(function (docSnapshot) {
+      var data = docSnapshot.data() || {};
+      if (clean(data.testId) === safeTestId) {
+        matchedDoc = docSnapshot;
+        return true;
+      }
+      return false;
+    });
+    return matchedDoc;
   }
 
   async function getStudentAuthEmail(loginNameNormalized) {
@@ -527,6 +597,29 @@
     return safeSummary;
   }
 
+  function buildStoredAttemptSummary(attempt) {
+    var safeAttempt = attempt && typeof attempt === "object" ? attempt : {};
+    var summary = buildBasicSummary({
+      score: Number(safeAttempt.score || safeAttempt.correctCount || 0),
+      correctCount: Number(safeAttempt.correctCount || safeAttempt.score || 0),
+      answeredCount: Number(safeAttempt.answeredCount || 0),
+      totalQuestions: Number(safeAttempt.totalQuestions || 0)
+    }, clean(safeAttempt.submittedAt));
+
+    if (Number(safeAttempt.percentage || 0) > 0 || Number(safeAttempt.correctCount || 0) === 0) {
+      summary.percentage = Number(safeAttempt.percentage || 0);
+    }
+    if (Number(safeAttempt.attemptedAccuracy || 0) > 0 || Number(safeAttempt.answeredCount || 0) === 0) {
+      summary.attemptedAccuracy = Number(safeAttempt.attemptedAccuracy || 0);
+    }
+    summary.unansweredCount = Number(safeAttempt.unansweredCount || summary.unansweredCount || 0);
+    summary.performanceStatusCode = clean(safeAttempt.performanceStatusCode) || clean(summary.performanceStatusCode);
+    if (Array.isArray(safeAttempt.suggestionCodes) && safeAttempt.suggestionCodes.length) {
+      summary.suggestionCodes = safeAttempt.suggestionCodes.slice();
+    }
+    return summary;
+  }
+
   async function getAnswerSummary(testId, answers, submittedAt, fallbackTotalQuestions) {
     await ensureStudentFirebase();
     var answerKeySnapshot = await studentState.api.getDoc(studentState.api.doc(studentState.db, ANSWER_KEYS_COLLECTION, clean(testId)));
@@ -536,8 +629,32 @@
   }
 
   async function finalizeExpiredAttempt(attemptRef, attemptData) {
+    try {
+      var backendResponse = await callStudentFunction("test-student-submit", {
+        method: "POST",
+        body: {
+          answers: attemptData && attemptData.answers && typeof attemptData.answers === "object" ? attemptData.answers : {},
+          autoSubmit: true
+        },
+        fallbackMessage: "Unable to submit the test right now."
+      });
+      return backendResponse.summary || backendResponse;
+    } catch (backendError) {
+      if (!shouldFallbackToDirectRewrite(backendError)) {
+        throw backendError;
+      }
+    }
+
     var submittedAt = clean(attemptData.submittedAt) || new Date().toISOString();
-    var summary = await getAnswerSummary(attemptData.testId, attemptData.answers || {}, submittedAt, attemptData.totalQuestions);
+    var summary;
+    try {
+      summary = await getAnswerSummary(attemptData.testId, attemptData.answers || {}, submittedAt, attemptData.totalQuestions);
+    } catch (error) {
+      if (isPermissionError(error)) {
+        throw createError("Test submission needs the Netlify backend. Open the site through Netlify dev or set backendBaseUrl to your deployed Netlify site.", "SUBMIT_BACKEND_REQUIRED", error);
+      }
+      throw error;
+    }
     await studentState.api.setDoc(attemptRef, {
       score: summary.score,
       correctCount: summary.correctCount,
@@ -646,6 +763,23 @@
   }
 
   async function getActiveTest() {
+    try {
+      var backendResponse = await callStudentFunction("test-student-active", {
+        method: "GET",
+        fallbackMessage: "Unable to load the test right now."
+      });
+      if (backendResponse && backendResponse.state === "submitted" && backendResponse.summary) {
+        backendResponse.summary = decorateSummaryWithRewriteRequest(backendResponse.summary, backendResponse.summary);
+      }
+      if (backendResponse && backendResponse.ok) {
+        return backendResponse;
+      }
+    } catch (backendError) {
+      if (!shouldFallbackToDirectRewrite(backendError)) {
+        throw backendError;
+      }
+    }
+
     var sessionPayload = await getStudentSession();
     var activeTestSnapshot;
     try {
@@ -722,12 +856,22 @@
       }
 
       if (attempt.status !== "started") {
+        var submittedSummary;
+        try {
+          submittedSummary = await getAnswerSummary(publicTest.id, attempt.answers || {}, attempt.submittedAt, attempt.totalQuestions);
+        } catch (error) {
+          if (isPermissionError(error)) {
+            submittedSummary = buildStoredAttemptSummary(attempt);
+          } else {
+            throw error;
+          }
+        }
         return {
           ok: true,
           state: "submitted",
           student: sessionPayload.student,
           test: publicTest,
-          summary: decorateSummaryWithRewriteRequest(await getAnswerSummary(publicTest.id, attempt.answers || {}, attempt.submittedAt, attempt.totalQuestions), attempt),
+          summary: decorateSummaryWithRewriteRequest(submittedSummary, attempt),
           message: "Your test has already been submitted."
         };
       }
@@ -788,6 +932,25 @@
   }
 
   async function startAttempt() {
+    try {
+      var backendResponse = await callStudentFunction("test-student-start", {
+        method: "POST",
+        body: {},
+        fallbackMessage: "Unable to start the test right now."
+      });
+      if (backendResponse && backendResponse.ok) {
+        return {
+          ok: true,
+          test: backendResponse.test,
+          attempt: backendResponse.attempt
+        };
+      }
+    } catch (backendError) {
+      if (!shouldFallbackToDirectRewrite(backendError)) {
+        throw backendError;
+      }
+    }
+
     var activePayload = await getActiveTest();
     if (!activePayload.test) {
       throw createError("No active test is available right now.", "NO_ACTIVE_TEST");
@@ -861,18 +1024,57 @@
 
     var attempt = mapAttemptDocument(attemptSnapshot);
     if (attempt.status !== "started") {
+      var existingSummary;
+      try {
+        existingSummary = await getAnswerSummary(publicTest.id, attempt.answers || {}, attempt.submittedAt, attempt.totalQuestions);
+      } catch (error) {
+        if (isPermissionError(error)) {
+          existingSummary = buildStoredAttemptSummary(attempt);
+        } else {
+          throw error;
+        }
+      }
       return {
         ok: true,
-        summary: decorateSummaryWithRewriteRequest(await getAnswerSummary(publicTest.id, attempt.answers || {}, attempt.submittedAt, attempt.totalQuestions), attempt)
+        summary: decorateSummaryWithRewriteRequest(existingSummary, attempt)
       };
     }
 
     var safePayload = payload && typeof payload === "object" ? payload : {};
     var answers = sanitizeAnswers(publicTest.questions, safePayload.answers);
+
+    try {
+      var backendResponse = await callStudentFunction("test-student-submit", {
+        method: "POST",
+        body: {
+          answers: answers,
+          autoSubmit: Boolean(safePayload.autoSubmit)
+        },
+        fallbackMessage: "Unable to submit the test right now."
+      });
+      return {
+        ok: true,
+        summary: backendResponse.summary || backendResponse
+      };
+    } catch (backendError) {
+      if (!shouldFallbackToDirectRewrite(backendError)) {
+        throw backendError;
+      }
+    }
+
     var submittedAt = new Date().toISOString();
     var timedOut = new Date(attempt.expiresAt).getTime() <= Date.now();
     var finalStatus = safePayload.autoSubmit || timedOut ? "auto_submitted" : "submitted";
-    var summary = await getAnswerSummary(publicTest.id, answers, submittedAt, publicTest.questionCount);
+    var summary;
+
+    try {
+      summary = await getAnswerSummary(publicTest.id, answers, submittedAt, publicTest.questionCount);
+    } catch (error) {
+      if (isPermissionError(error)) {
+        throw createError("Test submission needs the Netlify backend. Open the site through Netlify dev or set backendBaseUrl to your deployed Netlify site.", "SUBMIT_BACKEND_REQUIRED", error);
+      }
+      throw error;
+    }
 
     try {
       await studentState.api.setDoc(attemptRef, {
@@ -892,12 +1094,56 @@
         updatedAt: submittedAt
       }, { merge: true });
     } catch (error) {
+      if (isPermissionError(error)) {
+        throw createError("Test submission is blocked by Firestore permissions. Deploy the latest Netlify backend or publish the latest Firestore rules.", "SUBMIT_PERMISSION_BLOCKED", error);
+      }
       throw createError("Unable to submit the test right now.", clean(error && error.code) || "SUBMIT_FAILED", error);
     }
 
     return {
       ok: true,
       summary: summary
+    };
+  }
+
+  async function requestRewriteDirect(payload, activePayload) {
+    var safe = payload && typeof payload === "object" ? payload : {};
+    var requestedTestId = clean(safe.testId || activePayload.test.id);
+    if (requestedTestId !== clean(activePayload.test.id)) {
+      throw createError("Retest request could not be matched to the active test.", "TEST_MISMATCH");
+    }
+
+    var attemptSnapshot = await getAttemptSnapshot(activePayload.student.id, activePayload.test.id);
+    if (!attemptSnapshot || !attemptSnapshot.exists()) {
+      throw createError("No submitted test attempt was found for this student.", "ATTEMPT_MISSING");
+    }
+
+    var attempt = mapAttemptDocument(attemptSnapshot);
+    if (attempt.status === "started") {
+      throw createError("Finish and submit the current test before requesting a retest.", "ATTEMPT_IN_PROGRESS");
+    }
+    if (attempt.rewriteRequestStatus === "pending") {
+      throw createError(window.VisionTestI18n ? window.VisionTestI18n.t("test_rewrite_already_requested", "You have already requested to retake this test.") : "You have already requested to retake this test.", "ALREADY_REQUESTED");
+    }
+    if (attempt.rewriteRequestStatus === "approved") {
+      throw createError(window.VisionTestI18n ? window.VisionTestI18n.t("test_rewrite_approved_ready", "Your retest has already been approved. Log in again and start the test.") : "Your retest has already been approved. Log in again and start the test.", "ALREADY_APPROVED");
+    }
+
+    var requestedAt = new Date().toISOString();
+    await studentState.api.setDoc(attemptSnapshot.ref, {
+      rewriteRequestStatus: "pending",
+      rewriteRequestedAt: requestedAt,
+      rewriteRequestedAtMs: Date.now(),
+      rewriteReviewedAt: "",
+      rewriteReviewedAtMs: 0,
+      rewriteReviewedBy: "",
+      updatedAt: requestedAt
+    }, { merge: true });
+
+    return {
+      ok: true,
+      status: "pending",
+      requestedAt: requestedAt
     };
   }
 
@@ -959,38 +1205,28 @@
         throw createError("Retest request could not be matched to the active test.", "TEST_MISMATCH");
       }
 
-      var attemptSnapshot = await getAttemptSnapshot(activePayload.student.id, activePayload.test.id);
-      if (!attemptSnapshot || !attemptSnapshot.exists()) {
-        throw createError("No submitted test attempt was found for this student.", "ATTEMPT_MISSING");
+      try {
+        return await callStudentFunction("test-student-rewrite", {
+          method: "POST",
+          body: {
+            testId: requestedTestId
+          },
+          fallbackMessage: "Unable to submit rewrite request right now."
+        });
+      } catch (backendError) {
+        if (!shouldFallbackToDirectRewrite(backendError)) {
+          throw backendError;
+        }
       }
 
-      var attempt = mapAttemptDocument(attemptSnapshot);
-      if (attempt.status === "started") {
-        throw createError("Finish and submit the current test before requesting a retest.", "ATTEMPT_IN_PROGRESS");
+      try {
+        return await requestRewriteDirect({ testId: requestedTestId }, activePayload);
+      } catch (error) {
+        if (isPermissionError(error)) {
+          throw createError("Retake requests are blocked by Firestore permissions. Deploy the Netlify function or publish the latest Firestore rules to allow this action.", "REWRITE_PERMISSION_BLOCKED", error);
+        }
+        throw error;
       }
-      if (attempt.rewriteRequestStatus === "pending") {
-        throw createError(window.VisionTestI18n ? window.VisionTestI18n.t("test_rewrite_already_requested", "You have already requested to retake this test.") : "You have already requested to retake this test.", "ALREADY_REQUESTED");
-      }
-      if (attempt.rewriteRequestStatus === "approved") {
-        throw createError(window.VisionTestI18n ? window.VisionTestI18n.t("test_rewrite_approved_ready", "Your retest has already been approved. Log in again and start the test.") : "Your retest has already been approved. Log in again and start the test.", "ALREADY_APPROVED");
-      }
-
-      var requestedAt = new Date().toISOString();
-      await studentState.api.setDoc(attemptSnapshot.ref, {
-        rewriteRequestStatus: "pending",
-        rewriteRequestedAt: requestedAt,
-        rewriteRequestedAtMs: Date.now(),
-        rewriteReviewedAt: "",
-        rewriteReviewedAtMs: 0,
-        rewriteReviewedBy: "",
-        updatedAt: requestedAt
-      }, { merge: true });
-
-      return {
-        ok: true,
-        status: "pending",
-        requestedAt: requestedAt
-      };
     },
     getRewriteRequests: async function () {
       var store = await requireAdminStore();

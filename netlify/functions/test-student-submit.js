@@ -1,10 +1,21 @@
 "use strict";
 
-const { getDb } = require("./_lib/firebase");
+const { getAuth, getDb } = require("./_lib/firebase");
 const { verifyStudentSession } = require("./_lib/test-auth");
 const { json, noContent, readJsonBody } = require("./_lib/http");
 const { clean, getActiveTest, getAttemptForStudent } = require("./_lib/test-data");
 const { buildSummary, scoreAnswers } = require("./_lib/test-attempts");
+
+async function resolveStudentSession(token) {
+  try {
+    return verifyStudentSession(token);
+  } catch (sessionError) {
+    const decoded = await getAuth().verifyIdToken(token);
+    return {
+      studentId: clean(decoded && decoded.uid)
+    };
+  }
+}
 
 exports.handler = async function (event) {
   if (event.httpMethod === "OPTIONS") {
@@ -18,7 +29,7 @@ exports.handler = async function (event) {
   try {
     const authHeader = event.headers.authorization || event.headers.Authorization || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-    const session = verifyStudentSession(token);
+    const session = await resolveStudentSession(token);
     const body = await readJsonBody(event);
     const db = getDb();
 
@@ -59,7 +70,9 @@ exports.handler = async function (event) {
       performanceStatusCode: summary.performanceStatusCode,
       suggestionCodes: summary.suggestionCodes,
       submittedAt: summary.submittedAt,
-      status: body.autoSubmit || timedOut ? "auto_submitted" : "submitted"
+      submittedAtMs: new Date(summary.submittedAt).getTime(),
+      status: body.autoSubmit || timedOut ? "auto_submitted" : "submitted",
+      updatedAt: summary.submittedAt
     }, { merge: true });
 
     return json(200, {
