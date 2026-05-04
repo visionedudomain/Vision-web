@@ -61,6 +61,8 @@ exports.handler = async function (event) {
       reviewedAt: now
     });
   } catch (error) {
-    return json(500, { error: error && error.message ? error.message : "Unable to process rewrite request." });
+    return json(Number(error && error.statusCode) || 500, {
+      error: error && error.message ? error.message : "Unable to process rewrite request."
+    });
   }
 };

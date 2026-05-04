@@ -4,6 +4,12 @@ const admin = require("firebase-admin");
 
 let appInstance = null;
 
+function createHttpError(message, statusCode) {
+  const error = new Error(message);
+  error.statusCode = Number(statusCode || 500);
+  return error;
+}
+
 function readServiceAccount() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     return JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -43,7 +49,7 @@ async function verifyAdminRequest(event) {
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
   if (!token) {
-    throw new Error("Missing admin authorization token.");
+    throw createHttpError("Missing admin authorization token.", 401);
   }
 
   const decoded = await getAuth().verifyIdToken(token);
@@ -51,7 +57,7 @@ async function verifyAdminRequest(event) {
   const userEmail = String(decoded.email || "").trim().toLowerCase();
 
   if (!userEmail || userEmail !== expectedEmail) {
-    throw new Error("Admin access denied.");
+    throw createHttpError("Admin access denied.", 403);
   }
 
   return decoded;

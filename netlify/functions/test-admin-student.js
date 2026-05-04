@@ -141,6 +141,8 @@ exports.handler = async function (event) {
 
     return json(400, { error: "Unsupported student action." });
   } catch (error) {
-    return json(500, { error: error && error.message ? error.message : "Unable to process student request." });
+    return json(Number(error && error.statusCode) || 500, {
+      error: error && error.message ? error.message : "Unable to process student request."
+    });
   }
 };

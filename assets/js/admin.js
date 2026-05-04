@@ -3,14 +3,14 @@
 
   function t(key, fallback) {
     var translated = "";
-    if (window.VisionI18n && typeof window.VisionI18n.t === "function") {
-      translated = window.VisionI18n.t(key);
+    if (window.VisionTestI18n && typeof window.VisionTestI18n.t === "function") {
+      translated = String(window.VisionTestI18n.t(key, "") || "");
       if (translated && translated !== key) {
         return translated;
       }
     }
-    if (window.VisionTestI18n && typeof window.VisionTestI18n.t === "function") {
-      translated = window.VisionTestI18n.t(key, "");
+    if (window.VisionI18n && typeof window.VisionI18n.t === "function") {
+      translated = String(window.VisionI18n.t(key) || "");
       if (translated && translated !== key) {
         return translated;
       }
@@ -652,6 +652,7 @@
           }
 
           try {
+            setStatus("testRewriteStatus", "", false);
             if (action === "approve") {
               await window.VisionTestApi.approveRewrite({ requestId: requestId });
               setStatus("testRewriteStatus", t("test_rewrite_approved_ready", "Rewrite request approved successfully."), false);
@@ -669,6 +670,7 @@
         function refreshRewriteRequests() {
           window.VisionTestApi.getRewriteRequests().then(function (requests) {
             testRewriteRequestsBody.innerHTML = "";
+            setStatus("testRewriteStatus", "", false);
             if (!Array.isArray(requests) || !requests.length) {
               testRewriteRequestsBody.innerHTML = "<tr><td colspan='6'>" + t("test_rewrite_no_requests", "No pending rewrite requests.") + "</td></tr>";
               return;

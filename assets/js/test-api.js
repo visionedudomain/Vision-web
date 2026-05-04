@@ -161,6 +161,14 @@
     return isNetworkError(error);
   }
 
+  function shouldFallbackToDirectAdminRewrite(error) {
+    var status = Number(error && error.status || 0);
+    if (status === 404 || status === 405) {
+      return true;
+    }
+    return isNetworkError(error);
+  }
+
   function getFirebaseModuleUrl(fileName) {
     return "https://www.gstatic.com/firebasejs/" + FIREBASE_VERSION + "/" + fileName;
   }
@@ -1275,7 +1283,7 @@
           fallbackMessage: "Unable to approve rewrite request right now."
         });
       } catch (backendError) {
-        if (!shouldFallbackToDirectRewrite(backendError)) {
+        if (!shouldFallbackToDirectAdminRewrite(backendError)) {
           throw backendError;
         }
       }
@@ -1302,7 +1310,7 @@
           fallbackMessage: "Unable to reject rewrite request right now."
         });
       } catch (backendError) {
-        if (!shouldFallbackToDirectRewrite(backendError)) {
+        if (!shouldFallbackToDirectAdminRewrite(backendError)) {
           throw backendError;
         }
       }
