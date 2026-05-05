@@ -29,12 +29,11 @@ service cloud.firestore {
     function isRewriteRequestUpdate() {
       return hasStudentRecord()
         && resource.data.studentId == request.auth.uid
-        && request.resource.data.studentId == request.auth.uid
+        && request.resource.data.studentId == resource.data.studentId
         && request.resource.data.testId == resource.data.testId
         && resource.data.status != "started"
-        && request.resource.data.status == resource.data.status
-        && !(request.resource.data.rewriteRequestStatus in ["approved"])
-        && !(resource.data.rewriteRequestStatus in ["pending", "approved"])
+        && resource.data.rewriteRequestStatus != "pending"
+        && resource.data.rewriteRequestStatus != "approved"
         && request.resource.data.rewriteRequestStatus == "pending"
         && request.resource.data.rewriteRequestedAt is string
         && request.resource.data.rewriteRequestedAtMs is int
@@ -84,19 +83,11 @@ service cloud.firestore {
     function isApprovedRewriteRestartUpdate(attemptId) {
       return hasStudentRecord()
         && resource.data.studentId == request.auth.uid
-        && request.resource.data.studentId == request.auth.uid
+        && request.resource.data.studentId == resource.data.studentId
         && request.resource.data.testId == resource.data.testId
         && attemptId == request.auth.uid + "__" + resource.data.testId
         && exists(/databases/$(database)/documents/published_tests/$(resource.data.testId))
         && get(/databases/$(database)/documents/published_tests/$(resource.data.testId)).data.isActive == true
-        && request.resource.data.studentDisplayName
-            == get(/databases/$(database)/documents/students/$(request.auth.uid)).data.displayName
-        && request.resource.data.studentLoginName
-            == get(/databases/$(database)/documents/students/$(request.auth.uid)).data.loginName
-        && request.resource.data.testTitle
-            == get(/databases/$(database)/documents/published_tests/$(resource.data.testId)).data.title
-        && request.resource.data.language
-            == get(/databases/$(database)/documents/published_tests/$(resource.data.testId)).data.language
         && resource.data.rewriteRequestStatus == "approved"
         && request.resource.data.status == "started"
         && request.resource.data.startedAt is string
@@ -110,8 +101,7 @@ service cloud.firestore {
         && request.resource.data.score == 0
         && request.resource.data.correctCount == 0
         && request.resource.data.answeredCount == 0
-        && request.resource.data.totalQuestions
-            == get(/databases/$(database)/documents/published_tests/$(resource.data.testId)).data.questionCount
+        && request.resource.data.totalQuestions is int
         && request.resource.data.percentage == 0
         && request.resource.data.attemptedAccuracy == 0
         && request.resource.data.unansweredCount == request.resource.data.totalQuestions
@@ -229,7 +219,8 @@ service cloud.firestore {
             == get(/databases/$(database)/documents/published_tests/$(request.resource.data.testId)).data.questionCount
         && get(/databases/$(database)/documents/published_tests/$(request.resource.data.testId)).data.isActive == true;
 
-      allow update: if isAdminRewriteReviewUpdate()
+      allow update: if isAdmin()
+        || isAdminRewriteReviewUpdate()
         || isApprovedRewriteRestartUpdate(attemptId)
         || (
           isApprovedStudent()
