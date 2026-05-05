@@ -903,6 +903,8 @@
     var testsBody = byId("testAdminTestsTableBody");
     var attemptsBody = byId("testAttemptsTableBody");
     var exportRegistrationsButton = byId("exportTestRegistrations");
+    var registrationSortNewestButton = byId("registrationSortNewest");
+    var registrationSortNameButton = byId("registrationSortName");
     var approvalCsvInput = byId("approvalCsvInput");
     var downloadApprovalTemplateButton = byId("downloadApprovalTemplate");
     var exportResultsButton = byId("exportTestResults");
@@ -918,6 +920,7 @@
     var students = [];
     var tests = [];
     var attempts = [];
+    var registrationSortMode = "newest";
     var builderQuestions = [];
     var builderSourceName = "";
     var builderAnswerSourceName = "";
@@ -936,6 +939,64 @@
       return !clean(safe.studentId) && status !== "inactive";
     }
 
+    function getRegistrationSortTimestamp(registration) {
+      var safe = registration && typeof registration === "object" ? registration : {};
+      var value = safe.updatedAt || safe.createdAt || safe.approvedAt || "";
+      var time = value ? new Date(value).getTime() : 0;
+      return Number.isFinite(time) ? time : 0;
+    }
+
+    function compareRegistrationNames(left, right) {
+      var leftName = clean((left && left.displayName) || (left && left.loginName) || (left && left.id)).toLowerCase();
+      var rightName = clean((right && right.displayName) || (right && right.loginName) || (right && right.id)).toLowerCase();
+      var nameCompare = leftName.localeCompare(rightName, undefined, { sensitivity: "base" });
+      if (nameCompare) {
+        return nameCompare;
+      }
+      var leftLogin = clean(left && left.loginName).toLowerCase();
+      var rightLogin = clean(right && right.loginName).toLowerCase();
+      return leftLogin.localeCompare(rightLogin, undefined, { sensitivity: "base" });
+    }
+
+    function getSortedRegistrations() {
+      return registrations.slice().sort(function (left, right) {
+        if (registrationSortMode === "az") {
+          var nameCompare = compareRegistrationNames(left, right);
+          if (nameCompare) {
+            return nameCompare;
+          }
+        }
+        var timeCompare = getRegistrationSortTimestamp(right) - getRegistrationSortTimestamp(left);
+        if (timeCompare) {
+          return timeCompare;
+        }
+        return compareRegistrationNames(left, right);
+      });
+    }
+
+    function updateRegistrationSortButtons() {
+      if (registrationSortNewestButton) {
+        registrationSortNewestButton.classList.toggle("btn-primary", registrationSortMode === "newest");
+        registrationSortNewestButton.classList.toggle("btn-outline", registrationSortMode !== "newest");
+      }
+      if (registrationSortNameButton) {
+        registrationSortNameButton.classList.toggle("btn-primary", registrationSortMode === "az");
+        registrationSortNameButton.classList.toggle("btn-outline", registrationSortMode !== "az");
+      }
+    }
+
+    function setRegistrationSortMode(nextMode) {
+      var normalized = clean(nextMode).toLowerCase() === "az" ? "az" : "newest";
+      if (registrationSortMode === normalized) {
+        updateRegistrationSortButtons();
+        return;
+      }
+      registrationSortMode = normalized;
+      updateRegistrationSortButtons();
+      populateRegistrationSelect();
+      renderRegistrations();
+    }
+
     function populateRegistrationSelect() {
       var select = studentApprovalForm ? studentApprovalForm.elements.registrationId : null;
       if (!select) {
@@ -944,7 +1005,7 @@
       var currentValue = select.value;
       select.innerHTML = "";
       select.appendChild(new Option(t("test_select_registration"), ""));
-      registrations.filter(function (registration) {
+      getSortedRegistrations().filter(function (registration) {
         return registrationNeedsApproval(registration);
       }).forEach(function (registration) {
         select.appendChild(new Option(registration.displayName + " - " + registration.loginName, registration.id));
@@ -957,11 +1018,12 @@
         return;
       }
       registrationsBody.innerHTML = "";
-      if (!registrations.length) {
+      var sortedRegistrations = getSortedRegistrations();
+      if (!sortedRegistrations.length) {
         registrationsBody.innerHTML = "<tr><td colspan='6'>" + t("test_students_empty") + "</td></tr>";
         return;
       }
-      registrations.forEach(function (registration) {
+      sortedRegistrations.forEach(function (registration) {
         var row = document.createElement("tr");
         row.innerHTML = "" +
           "<td>" + (registration.displayName || "-") + "</td>" +
@@ -1164,6 +1226,7 @@
 
     window.VisionTestStore.subscribeRegistrations(function (items) {
       registrations = Array.isArray(items) ? items.slice() : [];
+      updateRegistrationSortButtons();
       populateRegistrationSelect();
       renderRegistrations();
     });
@@ -1182,6 +1245,18 @@
       attempts = Array.isArray(items) ? items.slice() : [];
       renderAttempts();
     });
+
+    if (registrationSortNewestButton) {
+      registrationSortNewestButton.addEventListener("click", function () {
+        setRegistrationSortMode("newest");
+      });
+    }
+
+    if (registrationSortNameButton) {
+      registrationSortNameButton.addEventListener("click", function () {
+        setRegistrationSortMode("az");
+      });
+    }
 
     if (studentApprovalForm) {
       studentApprovalForm.elements.registrationId.addEventListener("change", function () {
@@ -1283,12 +1358,13 @@
 
     if (exportRegistrationsButton) {
       exportRegistrationsButton.addEventListener("click", function () {
-        if (!registrations.length) {
+        var sortedRegistrations = getSortedRegistrations();
+        if (!sortedRegistrations.length) {
           setStatus("testRegistrationsStatus", t("test_students_empty"), true);
           return;
         }
         var headers = ["displayName", "loginName", "mobile", "batchName", "language", "status", "createdAt"];
-        var rows = registrations.map(function (registration) {
+        var rows = sortedRegistrations.map(function (registration) {
           return [
             registration.displayName,
             registration.loginName,
