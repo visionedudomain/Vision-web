@@ -26,13 +26,13 @@ service cloud.firestore {
         && resource.data.studentId == request.auth.uid
         && request.resource.data.studentId == request.auth.uid
         && request.resource.data.testId == resource.data.testId
-        && resource.data.status in ["submitted", "auto_submitted"]
+        && resource.data.status != "started"
         && request.resource.data.status == resource.data.status
+        && !(request.resource.data.rewriteRequestStatus in ["approved"])
         && !(resource.data.rewriteRequestStatus in ["pending", "approved"])
         && request.resource.data.rewriteRequestStatus == "pending"
         && request.resource.data.rewriteRequestedAt is string
         && request.resource.data.rewriteRequestedAtMs is int
-        && request.resource.data.rewriteRequestedAtMs >= resource.data.submittedAtMs
         && request.resource.data.rewriteReviewedAt == ""
         && request.resource.data.rewriteReviewedAtMs == 0
         && request.resource.data.rewriteReviewedBy == ""
