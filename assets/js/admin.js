@@ -33,6 +33,13 @@
     return String(value || "").trim();
   }
 
+  var ADMIN_VIEW_KEY = "vision_admin_view_v1";
+
+  function normalizeAdminView(value) {
+    var safe = clean(value).toLowerCase();
+    return safe === "tests" || safe === "fees" ? safe : "overview";
+  }
+
   function parseMarqueeLinks(input) {
     return String(input || "").split(/\r?\n/).map(function (line) {
       return clean(line);
@@ -369,6 +376,9 @@
     var marqueeAdminList = byId("marqueeAdminList");
     var exportButton = byId("exportApplications");
     var clearApplicationsButton = byId("clearApplications");
+    var adminWorkspaceTitle = byId("adminWorkspaceTitle");
+    var adminWorkspaceIntro = byId("adminWorkspaceIntro");
+    var adminViewButtons = document.querySelectorAll("[data-admin-view-target]");
 
     var unsubscribeSite = null;
     var unsubscribeNews = null;
@@ -376,6 +386,64 @@
     var authReadyPromise = typeof VisionStore.readyForAuth === "function" ? VisionStore.readyForAuth() : Promise.resolve();
     var storeReadyPromise = VisionStore.ready();
     var isLoggingIn = false;
+
+    var adminViewCopy = {
+      overview: {
+        titleKey: "admin_workspace_overview_title",
+        titleFallback: "Website & Applications",
+        introKey: "admin_workspace_overview_intro",
+        introFallback: "Manage public content, homepage updates, and admission form submissions."
+      },
+      tests: {
+        titleKey: "admin_workspace_tests_title",
+        titleFallback: "Test Management",
+        introKey: "admin_workspace_tests_intro",
+        introFallback: "Handle registrations, student access, retest approvals, test builder, and results in one place."
+      },
+      fees: {
+        titleKey: "admin_workspace_fees_title",
+        titleFallback: "Fees Management",
+        introKey: "admin_workspace_fees_intro",
+        introFallback: "Track fee collection, due balances, and payment notes for approved students."
+      }
+    };
+
+    function updateWorkspaceCopy(viewName) {
+      var copy = adminViewCopy[normalizeAdminView(viewName)];
+      if (adminWorkspaceTitle) {
+        adminWorkspaceTitle.setAttribute("data-i18n", copy.titleKey);
+        adminWorkspaceTitle.textContent = t(copy.titleKey, copy.titleFallback);
+      }
+      if (adminWorkspaceIntro) {
+        adminWorkspaceIntro.setAttribute("data-i18n", copy.introKey);
+        adminWorkspaceIntro.textContent = t(copy.introKey, copy.introFallback);
+      }
+    }
+
+    function setActiveAdminView(nextView) {
+      var viewName = normalizeAdminView(nextView);
+      localStorage.setItem(ADMIN_VIEW_KEY, viewName);
+      if (window.location.hash !== "#" + viewName) {
+        window.history.replaceState(null, "", "#" + viewName);
+      }
+      document.querySelectorAll("[id^='adminView']").forEach(function (panel) {
+        panel.classList.add("hidden");
+      });
+      adminViewButtons.forEach(function (button) {
+        var isActive = button.getAttribute("data-admin-view-target") === viewName;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+      var activePanel = byId("adminView" + viewName.charAt(0).toUpperCase() + viewName.slice(1));
+      if (activePanel) {
+        activePanel.classList.remove("hidden");
+      }
+      updateWorkspaceCopy(viewName);
+    }
+
+    function getPreferredAdminView() {
+      return normalizeAdminView(clean(window.location.hash).replace(/^#/, "") || localStorage.getItem(ADMIN_VIEW_KEY));
+    }
 
     function stopDashboardSubscriptions() {
       if (unsubscribeSite) {
@@ -413,6 +481,7 @@
       toggleDashboard(loggedIn);
       if (loggedIn) {
         startDashboardSubscriptions();
+        setActiveAdminView(getPreferredAdminView());
       } else {
         stopDashboardSubscriptions();
         clearLoginForm();
@@ -597,120 +666,21 @@
       });
     }
 
-    // Student Approval Form Handler (Password Reset)
-    var studentApprovalForm = byId("studentApprovalForm");
-    if (studentApprovalForm) {
-      studentApprovalForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        var registrationId = clean(studentApprovalForm.elements.registrationId.value);
-        var loginName = clean(studentApprovalForm.elements.loginName.value);
-        var tempPassword = clean(studentApprovalForm.elements.tempPassword.value);
-        var language = clean(studentApprovalForm.elements.language.value);
-        var batchName = clean(studentApprovalForm.elements.batchName.value);
-
-        if (!registrationId || !loginName) {
-          setStatus("testRegistrationsStatus", "Please select an application and enter a login name.", true);
-          return;
-        }
-
-        try {
-          await window.VisionTestApi.approveStudent({
-            registrationId: registrationId,
-            loginName: loginName,
-            tempPassword: tempPassword || undefined,
-            language: language,
-            batchName: batchName
-          });
-          studentApprovalForm.reset();
-          setStatus("testRegistrationsStatus", t("status_student_approved", "Student approved successfully!"), false);
-        } catch (error) {
-          setStatus("testRegistrationsStatus", error && error.message ? error.message : "Unable to approve student.", true);
-        }
+    adminViewButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        setActiveAdminView(button.getAttribute("data-admin-view-target"));
       });
-    }
+    });
 
-    // Rewrite Requests Table Handler
-    var testRewriteRequestsBody = byId("testRewriteRequestsBody");
-    if (testRewriteRequestsBody) {
-      if (!window.VisionTestApi || typeof window.VisionTestApi.supportsRewriteRequests !== "function" || !window.VisionTestApi.supportsRewriteRequests()) {
-        var rewriteSection = testRewriteRequestsBody.closest("section");
-        if (rewriteSection) {
-          rewriteSection.classList.add("hidden");
-        }
-      } else {
-        testRewriteRequestsBody.addEventListener("click", async function (event) {
-          var button = getClosestActionButton(event.target, "data-rewrite-action");
-          if (!button) {
-            return;
-          }
-          event.preventDefault();
-          var requestId = button.getAttribute("data-rewrite-id");
-          var action = button.getAttribute("data-rewrite-action");
+    window.addEventListener("hashchange", function () {
+      setActiveAdminView(getPreferredAdminView());
+    });
 
-          if (!requestId || !action) {
-            return;
-          }
+    window.addEventListener("vision-language-changed", function () {
+      setActiveAdminView(getPreferredAdminView());
+    });
 
-          try {
-            setStatus("testRewriteStatus", "", false);
-            if (action === "approve") {
-              await window.VisionTestApi.approveRewrite({ requestId: requestId });
-              setStatus("testRewriteStatus", t("test_rewrite_approved_ready", "Rewrite request approved successfully."), false);
-            } else if (action === "reject") {
-              await window.VisionTestApi.rejectRewrite({ requestId: requestId });
-              setStatus("testRewriteStatus", t("test_rewrite_rejected", "Rewrite request rejected."), false);
-            }
-            // Refresh the list
-            refreshRewriteRequests();
-          } catch (error) {
-            setStatus("testRewriteStatus", error && error.message ? error.message : "Unable to process rewrite request.", true);
-          }
-        });
-
-        function refreshRewriteRequests() {
-          window.VisionTestApi.getRewriteRequests().then(function (requests) {
-            testRewriteRequestsBody.innerHTML = "";
-            setStatus("testRewriteStatus", "", false);
-            if (!Array.isArray(requests) || !requests.length) {
-              testRewriteRequestsBody.innerHTML = "<tr><td colspan='6'>" + t("test_rewrite_no_requests", "No pending rewrite requests.") + "</td></tr>";
-              return;
-            }
-            requests.forEach(function (req) {
-              var tr = document.createElement("tr");
-              var statusLabel = req.status === "approved"
-                ? t("test_status_approved", "Approved")
-                : req.status === "rejected"
-                  ? t("test_status_rejected", "Rejected")
-                  : t("test_status_pending", "Pending");
-              tr.innerHTML = "" +
-                "<td>" + (req.studentName || "-") + "</td>" +
-                "<td>" + (req.testTitle || "-") + "</td>" +
-                "<td>" + (req.score || "-") + "</td>" +
-                "<td>" + VisionStore.formatDisplayDate(req.requestedAt) + "</td>" +
-                "<td>" + statusLabel + "</td>" +
-                "<td>" +
-                  (req.status === "pending" ?
-                    "<button type='button' class='btn btn-sm btn-success' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='approve'>" + t("test_btn_approve_rewrite", "Approve Rewrite") + "</button>" +
-                    "<button type='button' class='btn btn-sm btn-danger' data-rewrite-id='" + (req.id || "") + "' data-rewrite-action='reject'>" + t("test_btn_reject_rewrite", "Reject Rewrite") + "</button>"
-                    : "-"
-                  ) +
-                "</td>";
-              testRewriteRequestsBody.appendChild(tr);
-            });
-          }).catch(function (error) {
-            setStatus("testRewriteStatus", error && error.message ? error.message : "Unable to load rewrite requests.", true);
-          });
-        }
-
-        if (window.VisionTestStore && typeof window.VisionTestStore.subscribeAttempts === "function") {
-          window.VisionTestStore.subscribeAttempts(function () {
-            refreshRewriteRequests();
-          });
-        } else if (unsubscribeNews === null) {
-          refreshRewriteRequests();
-        }
-      }
-    }
+    updateWorkspaceCopy(getPreferredAdminView());
 
     window.addEventListener("beforeunload", stopDashboardSubscriptions);
   });

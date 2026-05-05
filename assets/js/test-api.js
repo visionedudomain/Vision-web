@@ -163,7 +163,7 @@
 
   function shouldFallbackToDirectAdminRewrite(error) {
     var status = Number(error && error.status || 0);
-    if (status === 404 || status === 405) {
+    if (status === 404 || status === 405 || status >= 500) {
       return true;
     }
     return isNetworkError(error);
@@ -415,6 +415,45 @@
 
   function getAttemptDocumentId(studentId, testId) {
     return clean(studentId) + "__" + clean(testId);
+  }
+
+  function buildStartedAttemptPayload(student, publicTest, now, expiresAt) {
+    var safeStudent = student && typeof student === "object" ? student : {};
+    var safeTest = publicTest && typeof publicTest === "object" ? publicTest : {};
+    var startedAt = now instanceof Date ? now.toISOString() : new Date().toISOString();
+    var expiresAtIso = clean(expiresAt);
+    return {
+      studentId: clean(safeStudent.id),
+      studentDisplayName: clean(safeStudent.displayName),
+      studentLoginName: clean(safeStudent.loginName),
+      testId: clean(safeTest.id),
+      testTitle: clean(safeTest.title),
+      language: clean(safeTest.language),
+      startedAt: startedAt,
+      startedAtMs: new Date(startedAt).getTime(),
+      expiresAt: expiresAtIso,
+      expiresAtMs: new Date(expiresAtIso).getTime(),
+      submittedAt: "",
+      submittedAtMs: 0,
+      status: "started",
+      answers: {},
+      score: 0,
+      correctCount: 0,
+      answeredCount: 0,
+      totalQuestions: Number(safeTest.questionCount || 0),
+      percentage: 0,
+      attemptedAccuracy: 0,
+      unansweredCount: Number(safeTest.questionCount || 0),
+      performanceStatusCode: "",
+      suggestionCodes: [],
+      rewriteRequestStatus: "",
+      rewriteRequestedAt: "",
+      rewriteRequestedAtMs: 0,
+      rewriteReviewedAt: "",
+      rewriteReviewedAtMs: 0,
+      rewriteReviewedBy: "",
+      updatedAt: startedAt
+    };
   }
 
   function clampExpiry(now, closesAtIso, durationMinutes) {
@@ -1015,25 +1054,31 @@
     var attemptId = getAttemptDocumentId(activePayload.student.id, publicTest.id);
     var attemptRef = studentState.api.doc(studentState.db, ATTEMPTS_COLLECTION, attemptId);
     var expiresAt = clampExpiry(now, publicTest.closesAt, publicTest.durationMinutes);
+    var existingAttemptSnapshot = await getAttemptSnapshot(activePayload.student.id, publicTest.id);
+    var existingAttempt = existingAttemptSnapshot && existingAttemptSnapshot.exists()
+      ? mapAttemptDocument(existingAttemptSnapshot)
+      : null;
 
-    await studentState.api.setDoc(attemptRef, {
-      studentId: activePayload.student.id,
-      studentDisplayName: activePayload.student.displayName,
-      studentLoginName: activePayload.student.loginName,
-      testId: publicTest.id,
-      testTitle: publicTest.title,
-      language: publicTest.language,
-      startedAt: now.toISOString(),
-      startedAtMs: now.getTime(),
-      expiresAt: expiresAt,
-      expiresAtMs: new Date(expiresAt).getTime(),
-      submittedAt: "",
-      submittedAtMs: 0,
-      status: "started",
-      answers: {},
-      totalQuestions: publicTest.questionCount,
-      updatedAt: now.toISOString()
-    }, { merge: false });
+    if (existingAttempt && existingAttempt.rewriteRequestStatus !== "approved") {
+      throw createError("Your test has already been submitted.", "ALREADY_SUBMITTED");
+    }
+
+    try {
+      await studentState.api.setDoc(
+        attemptRef,
+        buildStartedAttemptPayload(activePayload.student, publicTest, now, expiresAt),
+        { merge: false }
+      );
+    } catch (error) {
+      if (isPermissionError(error)) {
+        throw createError(
+          "Starting the approved retest is blocked by Firestore permissions. Publish the latest Firestore rules or use the Netlify backend.",
+          "REWRITE_START_PERMISSION_BLOCKED",
+          error
+        );
+      }
+      throw createError("Unable to start the test right now.", clean(error && error.code) || "START_FAILED", error);
+    }
 
     return {
       ok: true,

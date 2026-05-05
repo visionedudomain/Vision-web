@@ -9,6 +9,7 @@
   var LOGIN_INDEX_COLLECTION = "student_login_index";
   var PUBLIC_TESTS_COLLECTION = "published_tests";
   var ANSWER_KEYS_COLLECTION = "test_answer_keys";
+  var DEFAULT_STUDENT_FEE = 800;
 
   var state = {
     configured: false,
@@ -53,6 +54,65 @@
   function normalizeStatus(value, fallback) {
     var normalized = clean(value).toLowerCase();
     return normalized || clean(fallback).toLowerCase();
+  }
+
+  function normalizeAmount(value) {
+    var amount = Number(value);
+    if (!Number.isFinite(amount) || amount < 0) {
+      return 0;
+    }
+    return Math.round(amount * 100) / 100;
+  }
+
+  function deriveFeeStatus(totalAmount, paidAmount) {
+    var total = normalizeAmount(totalAmount);
+    var paid = normalizeAmount(paidAmount);
+    if (total > 0 && paid >= total) {
+      return "paid";
+    }
+    return "unpaid";
+  }
+
+  function mapStoredFeeDetails(value) {
+    var safe = value && typeof value === "object" ? value : {};
+    var totalAmount = DEFAULT_STUDENT_FEE;
+    var rawStatus = normalizeStatus(safe.status, deriveFeeStatus(totalAmount, safe.paidAmount));
+    var status = rawStatus === "paid" ? "paid" : "unpaid";
+    var paidAmount = status === "paid" ? totalAmount : 0;
+    var dueAmount = Math.max(totalAmount - paidAmount, 0);
+    return {
+      totalAmount: totalAmount,
+      paidAmount: paidAmount,
+      dueAmount: dueAmount,
+      status: status,
+      lastPaidAt: status === "paid" ? (safe.lastPaidAt || "") : "",
+      notes: clean(safe.notes),
+      updatedAt: safe.updatedAt || ""
+    };
+  }
+
+  function buildFeeDetailsPayload(value) {
+    var safe = value && typeof value === "object" ? value : {};
+    var totalAmount = DEFAULT_STUDENT_FEE;
+    var requestedStatus = normalizeStatus(safe.status, deriveFeeStatus(totalAmount, safe.paidAmount));
+    var status = requestedStatus === "paid" ? "paid" : "unpaid";
+    var paidAmount = status === "paid" ? totalAmount : 0;
+    var dueAmount = Math.max(totalAmount - paidAmount, 0);
+    var lastPaidAt = clean(safe.lastPaidAt);
+    if (status !== "paid") {
+      lastPaidAt = "";
+    } else if (!lastPaidAt) {
+      lastPaidAt = new Date().toISOString().slice(0, 10);
+    }
+    return {
+      totalAmount: totalAmount,
+      paidAmount: paidAmount,
+      dueAmount: dueAmount,
+      status: status,
+      lastPaidAt: lastPaidAt,
+      notes: clean(safe.notes),
+      updatedAt: new Date().toISOString()
+    };
   }
 
   function normalizeLoginName(value) {
@@ -226,7 +286,8 @@
       status: normalizeStatus(data.status, "approved"),
       updatedAt: data.updatedAt || "",
       passwordUpdatedAt: data.passwordUpdatedAt || "",
-      approvedAt: data.approvedAt || ""
+      approvedAt: data.approvedAt || "",
+      fee: mapStoredFeeDetails(data.fee)
     };
   }
 
@@ -549,7 +610,11 @@
     }
 
     state.api = await loadFirebaseApi();
-    state.app = state.api.getApps().length ? state.api.getApp() : state.api.initializeApp(config);
+    try {
+      state.app = state.api.getApp();
+    } catch (error) {
+      state.app = state.api.initializeApp(config);
+    }
     state.auth = state.api.getAuth(state.app);
     state.db = state.api.getFirestore(state.app);
     state.configured = true;
@@ -754,6 +819,28 @@
       status: clean(status) === "inactive" ? "inactive" : "approved",
       updatedAt: new Date().toISOString()
     }, { merge: true });
+  }
+
+  async function saveStudentFee(payload) {
+    await readyPromise;
+    assertConfigured();
+    assertAdminSession();
+    var safe = payload && typeof payload === "object" ? payload : {};
+    var studentId = clean(safe.studentId);
+    if (!studentId) {
+      throw new Error("Choose a student first.");
+    }
+    var fee = buildFeeDetailsPayload(safe);
+    var updatedAt = new Date().toISOString();
+    await state.api.setDoc(state.api.doc(state.db, STUDENTS_COLLECTION, studentId), {
+      fee: fee,
+      updatedAt: updatedAt
+    }, { merge: true });
+    return {
+      ok: true,
+      studentId: studentId,
+      fee: fee
+    };
   }
 
   async function resetStudentPassword(studentId, nextPassword) {
@@ -1190,6 +1277,7 @@
     approveStudent: approveStudent,
     bulkApproveStudents: bulkApproveStudents,
     updateStudentStatus: updateStudentStatus,
+    saveStudentFee: saveStudentFee,
     deleteStudent: deleteStudent,
     resetStudentPassword: resetStudentPassword,
     clearAttempts: clearAttempts,

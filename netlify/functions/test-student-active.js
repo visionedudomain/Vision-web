@@ -64,6 +64,43 @@ exports.handler = async function (event) {
     const opensAt = new Date(publicTest.opensAt).getTime();
     const closesAt = new Date(publicTest.closesAt).getTime();
     const existingAttempt = await getAttemptForStudent(db, studentSnapshot.id, activeTestDoc.id);
+    const rewriteApproved = existingAttempt
+      && clean(existingAttempt.data.rewriteRequestStatus).toLowerCase() === "approved"
+      && clean(existingAttempt.data.status).toLowerCase() !== "started";
+
+    if (rewriteApproved) {
+      if (now < opensAt) {
+        return json(200, {
+          ok: true,
+          state: "before_window",
+          student: { id: studentSnapshot.id, displayName: student.displayName, loginName: student.loginName },
+          test: publicTest,
+          message: "The published test is not open yet."
+        });
+      }
+
+      if (now > closesAt) {
+        return json(200, {
+          ok: true,
+          state: "window_closed",
+          student: { id: studentSnapshot.id, displayName: student.displayName, loginName: student.loginName },
+          test: publicTest,
+          message: "The published test window is closed."
+        });
+      }
+
+      return json(200, {
+        ok: true,
+        state: "ready",
+        student: {
+          id: studentSnapshot.id,
+          displayName: student.displayName,
+          loginName: student.loginName
+        },
+        test: publicTest,
+        message: "Your retest is ready to start."
+      });
+    }
 
     if (existingAttempt && clean(existingAttempt.data.status) !== "started") {
       const summary = buildSummary({

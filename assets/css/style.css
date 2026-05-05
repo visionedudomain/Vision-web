@@ -726,6 +726,37 @@ textarea:focus {
   display: none !important;
 }
 
+.admin-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-workspace-head {
+  padding: 1.1rem;
+}
+
+.admin-workspace-bar {
+  margin-bottom: 0;
+}
+
+.admin-view-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.admin-view-toggle.is-active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 12px 22px rgba(184, 74, 112, 0.18);
+}
+
+.admin-view-panel {
+  display: block;
+}
+
 .admin-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -880,6 +911,7 @@ textarea:focus {
 
 .status-pill-published,
 .status-pill-approved,
+.status-pill-paid,
 .status-pill-submitted,
 .status-pill-auto_submitted {
   background: rgba(45, 102, 104, 0.14);
@@ -888,18 +920,27 @@ textarea:focus {
 
 .status-pill-draft,
 .status-pill-pending,
+.status-pill-partial,
 .status-pill-started {
   background: rgba(194, 193, 159, 0.28);
   color: var(--text-soft);
 }
 
 .status-pill-closed,
-.status-pill-inactive {
+.status-pill-inactive,
+.status-pill-unpaid,
+.status-pill-rejected {
   background: rgba(185, 28, 28, 0.12);
   color: #8f1c1c;
 }
 
+.status-pill-not_set {
+  background: rgba(13, 23, 59, 0.08);
+  color: var(--muted);
+}
+
 .student-approval-form,
+.fee-form-grid,
 .test-builder-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1233,6 +1274,7 @@ th {
 
   .summary-grid,
   .student-approval-form,
+  .fee-form-grid,
   .test-builder-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1321,6 +1363,7 @@ th {
 
   .summary-grid,
   .student-approval-form,
+  .fee-form-grid,
   .test-builder-grid {
     grid-template-columns: 1fr;
   }

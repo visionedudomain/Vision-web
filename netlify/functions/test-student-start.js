@@ -57,7 +57,10 @@ exports.handler = async function (event) {
 
     const existingAttempt = await getAttemptForStudent(db, studentSnapshot.id, activeTestDoc.id);
     if (existingAttempt) {
-      if (clean(existingAttempt.data.status) === "started") {
+      const existingStatus = clean(existingAttempt.data.status).toLowerCase();
+      const rewriteStatus = clean(existingAttempt.data.rewriteRequestStatus).toLowerCase();
+
+      if (existingStatus === "started") {
         const expiresAtTime = new Date(existingAttempt.data.expiresAt || "").getTime();
         if (expiresAtTime && expiresAtTime <= now.getTime()) {
           const summary = await finalizeAttempt(existingAttempt.ref, existingAttempt.data, activeTestDoc.data, {
@@ -68,17 +71,67 @@ exports.handler = async function (event) {
             summary
           });
         }
+        return json(200, {
+          ok: true,
+          test: publicTest,
+          attempt: {
+            id: existingAttempt.id,
+            startedAt: existingAttempt.data.startedAt,
+            expiresAt: existingAttempt.data.expiresAt,
+            answers: existingAttempt.data.answers || {}
+          }
+        });
       }
-      return json(200, {
-        ok: true,
-        test: publicTest,
-        attempt: {
-          id: existingAttempt.id,
-          startedAt: existingAttempt.data.startedAt,
-          expiresAt: existingAttempt.data.expiresAt,
-          answers: existingAttempt.data.answers || {}
-        }
-      });
+
+      if (rewriteStatus === "approved") {
+        const restartedAt = now.toISOString();
+        const restartedExpiresAt = clampExpiry(now, publicTest.closesAt, publicTest.durationMinutes);
+        await existingAttempt.ref.set({
+          studentId: studentSnapshot.id,
+          studentDisplayName: clean((studentSnapshot.data() || {}).displayName),
+          studentLoginName: clean((studentSnapshot.data() || {}).loginName),
+          testId: activeTestDoc.id,
+          testTitle: publicTest.title,
+          language: publicTest.language,
+          startedAt: restartedAt,
+          startedAtMs: now.getTime(),
+          expiresAt: restartedExpiresAt,
+          expiresAtMs: new Date(restartedExpiresAt).getTime(),
+          submittedAt: "",
+          submittedAtMs: 0,
+          status: "started",
+          answers: {},
+          score: 0,
+          correctCount: 0,
+          answeredCount: 0,
+          totalQuestions: publicTest.questionCount,
+          percentage: 0,
+          attemptedAccuracy: 0,
+          unansweredCount: publicTest.questionCount,
+          performanceStatusCode: "",
+          suggestionCodes: [],
+          rewriteRequestStatus: "",
+          rewriteRequestedAt: "",
+          rewriteRequestedAtMs: 0,
+          rewriteReviewedAt: "",
+          rewriteReviewedAtMs: 0,
+          rewriteReviewedBy: "",
+          updatedAt: restartedAt
+        }, { merge: false });
+
+        return json(200, {
+          ok: true,
+          test: publicTest,
+          attempt: {
+            id: existingAttempt.id,
+            startedAt: restartedAt,
+            expiresAt: restartedExpiresAt,
+            answers: {}
+          }
+        });
+      }
+
+      return json(409, { error: "Your test has already been submitted." });
     }
 
     const expiresAt = clampExpiry(now, publicTest.closesAt, publicTest.durationMinutes);

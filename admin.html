@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=26">
+  <link rel="stylesheet" href="assets/css/style.css?v=27">
   <link rel="icon" type="image/png" href="assets/images/new_logo.png">
 </head>
 <body>
@@ -41,304 +41,407 @@
         <p id="loginStatus" class="status-text" role="status"></p>
       </section>
 
-      <section id="dashboardSection" class="hidden">
-        <div class="admin-grid">
-          <section class="form-card admin-block">
-            <h2 data-i18n="admin_update_title">Update Website Information</h2>
-            <form id="siteContentForm">
-              <label><span data-i18n="label_tagline">Tagline</span>
-                <input type="text" name="tagline" required>
-              </label>
-              <label><span data-i18n="label_hero_title">Hero Title</span>
-                <input type="text" name="heroTitle" required>
-              </label>
-              <label><span data-i18n="label_hero_text">Hero Text</span>
-                <textarea name="heroText" rows="3" required></textarea>
-              </label>
-              <label><span data-i18n="label_announcement">Announcement</span>
-                <textarea name="announcement" rows="3" required></textarea>
-              </label>
-              <label><span data-i18n="label_address">Address</span>
-                <input type="text" name="address" required>
-              </label>
-              <label><span data-i18n="label_phone">Phone</span>
-                <input type="text" name="phone" required>
-              </label>
-              <label><span data-i18n="label_email">Email</span>
-                <input type="email" name="email" required>
-              </label>
-              <label><span data-i18n="label_instagram_url">Instagram Profile URL</span>
-                <input type="url" name="instagramProfileUrl" required placeholder="https://www.instagram.com/visioneduacademy/">
-              </label>
-              <label><span data-i18n="label_facebook_url">Facebook Page URL</span>
-                <input type="text" name="facebookProfileUrl" required placeholder="Vision Education Academy or https://www.facebook.com/visioneducacademy">
-              </label>
-              <label><span data-i18n="label_marquee_upload">Marquee Image Links</span>
-                <textarea id="marqueeImageLinks" name="marqueeImageLinks" rows="4" data-i18n-placeholder="placeholder_marquee_images" placeholder="https://example.com/photo-1.jpg&#10;https://example.com/photo-2.jpg"></textarea>
-              </label>
-              <p class="form-note" data-i18n="admin_marquee_upload_hint">Paste one image link per line. These links will be shown only on the home page marquee.</p>
-              <div id="marqueeAdminList" class="marquee-upload-list"></div>
-              <button type="submit" class="btn btn-primary" data-i18n="btn_save_site">Save Website Information</button>
-              <p id="contentStatus" class="status-text" role="status"></p>
-            </form>
-          </section>
-
-          <section class="form-card admin-block">
-            <h2 data-i18n="admin_news_title">News Management</h2>
-            <form id="newsForm">
-              <label><span data-i18n="label_news_title">News Title</span>
-                <input type="text" name="title" required>
-              </label>
-              <label><span data-i18n="label_news_date">News Date</span>
-                <input type="date" name="date" required>
-              </label>
-              <label><span data-i18n="label_summary">Summary</span>
-                <textarea name="summary" rows="3" required></textarea>
-              </label>
-              <button type="submit" class="btn btn-primary" data-i18n="btn_add_news">Add News</button>
-            </form>
-            <p id="newsStatus" class="status-text" role="status"></p>
-            <div id="newsAdminList" class="news-list compact"></div>
-          </section>
-
-          <section class="form-card admin-block">
-            <h2 data-i18n="admin_instagram_title">Instagram Posts</h2>
-            <form id="instagramPostForm">
-              <label><span data-i18n="label_instagram_post_url">Instagram Post URL or Embed Code</span>
-                <input type="text" name="postUrl" required placeholder="https://www.instagram.com/p/XXXXXXXXXXX/">
-              </label>
-              <button type="submit" class="btn btn-primary" data-i18n="btn_add_instagram_post">Add Instagram Post</button>
-            </form>
-            <p class="form-note" data-i18n="admin_instagram_hint">Paste an Instagram post URL or full embed code; it will appear on the home page.</p>
-            <div id="instagramAdminList" class="news-list compact"></div>
-          </section>
-
-          <section class="form-card admin-block admin-span">
-            <div class="row-between">
-              <h2 data-i18n="admin_applications_title">Application Submissions</h2>
-              <div class="row-inline">
-                <button id="exportApplications" class="btn btn-outline" type="button" data-i18n="btn_export_csv">Export CSV</button>
-                <button id="clearApplications" class="btn btn-danger" type="button" data-i18n="btn_clear_submissions">Clear Submissions</button>
-              </div>
+      <section id="dashboardSection" class="hidden admin-shell">
+        <div class="form-card admin-workspace-head">
+          <div class="row-between admin-workspace-bar">
+            <div>
+              <p class="mini-label" data-i18n="admin_workspace_label">Admin Workspace</p>
+              <h2 id="adminWorkspaceTitle" data-i18n="admin_workspace_overview_title">Website & Applications</h2>
+              <p id="adminWorkspaceIntro" class="form-note" data-i18n="admin_workspace_overview_intro">Manage public content, homepage updates, and admission form submissions.</p>
             </div>
-            <p id="applicationsStatus" class="status-text" role="status"></p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th data-i18n="th_candidate">Candidate</th>
-                    <th data-i18n="th_father">Father</th>
-                    <th data-i18n="th_mobile">Mobile</th>
-                    <th data-i18n="th_dob">DOB</th>
-                    <th data-i18n="th_category">Category</th>
-                    <th data-i18n="th_submitted">Submitted</th>
-                  </tr>
-                </thead>
-                <tbody id="applicationsTableBody"></tbody>
-              </table>
-            </div>
-          </section>
+            <button id="logoutButton" class="btn btn-outline" type="button" data-i18n="btn_logout">Logout</button>
+          </div>
+          <div class="admin-view-nav" role="tablist" aria-label="Admin sections">
+            <button type="button" class="btn btn-outline admin-view-toggle is-active" data-admin-view-target="overview" data-i18n="admin_view_overview">Website</button>
+            <button type="button" class="btn btn-outline admin-view-toggle" data-admin-view-target="tests" data-i18n="admin_view_tests">Test Management</button>
+            <button type="button" class="btn btn-outline admin-view-toggle" data-admin-view-target="fees" data-i18n="admin_view_fees">Fees Management</button>
+          </div>
+        </div>
 
-          <section class="form-card admin-block admin-span">
-            <div class="row-between">
-              <div>
-                <h2 data-test-i18n="test_registrations_title">Online Test Registrations</h2>
-                <p class="form-note" data-test-i18n="test_registrations_hint">Export pending registrations, verify payment offline, then upload an approval CSV or approve directly.</p>
-              </div>
-              <div class="row-inline">
-                <button id="exportTestRegistrations" type="button" class="btn btn-outline" data-test-i18n="test_btn_export_registrations">Export Registrations CSV</button>
-                <button id="downloadApprovalTemplate" type="button" class="btn btn-outline" data-test-i18n="test_btn_download_approval_template">Download Approval CSV Template</button>
-                <label class="btn btn-outline file-button">
-                  <span data-test-i18n="test_btn_import_approval_csv">Upload Approval CSV</span>
-                  <input id="approvalCsvInput" type="file" accept=".csv" hidden>
+        <section id="adminViewOverview" class="admin-view-panel">
+          <div class="admin-grid">
+            <section class="form-card admin-block">
+              <h2 data-i18n="admin_update_title">Update Website Information</h2>
+              <form id="siteContentForm">
+                <label><span data-i18n="label_tagline">Tagline</span>
+                  <input type="text" name="tagline" required>
                 </label>
-              </div>
-            </div>
-            <form id="studentApprovalForm" class="student-approval-form">
-              <label><span data-test-i18n="test_label_application">Choose Application</span>
-                <select name="registrationId" id="studentRegistrationSelect"></select>
-              </label>
-              <label><span data-test-i18n="test_label_student_login_name">Student Login Name</span>
-                <input type="text" name="loginName" data-test-i18n-placeholder="test_placeholder_login_name" placeholder="Enter login name">
-              </label>
-              <label><span data-test-i18n="test_label_password_override">Password Override</span>
-                <input type="text" name="tempPassword" minlength="6" data-test-i18n-placeholder="test_placeholder_password_override" placeholder="Leave blank to keep student's registration password">
-              </label>
-              <label><span data-test-i18n="test_label_language">Language</span>
-                <select name="language">
-                  <option value="en" data-test-i18n="test_language_english">English</option>
-                  <option value="ta" data-test-i18n="test_language_tamil">Tamil</option>
-                </select>
-              </label>
-              <label><span data-test-i18n="test_registration_batch">Batch</span>
-                <input type="text" name="batchName" data-test-i18n-placeholder="test_placeholder_batch" placeholder="Morning / Evening">
-              </label>
-              <button type="submit" class="btn btn-primary" data-test-i18n="test_btn_approve_student">Approve Student</button>
-            </form>
-            <p id="testRegistrationsStatus" class="status-text" role="status"></p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th data-test-i18n="test_th_candidate">Student</th>
-                    <th data-test-i18n="test_th_login">Login Name</th>
-                    <th data-test-i18n="test_th_mobile">Mobile</th>
-                    <th data-test-i18n="test_th_batch">Batch</th>
-                    <th data-test-i18n="test_th_status">Status</th>
-                    <th data-test-i18n="test_th_actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="testRegistrationsTableBody"></tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="form-card admin-block admin-span">
-            <div class="row-between">
-              <h2 data-test-i18n="test_student_access_title">Test Student Access</h2>
-            </div>
-            <p id="testStudentsStatus" class="status-text" role="status"></p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th data-test-i18n="test_th_candidate">Student</th>
-                    <th data-test-i18n="test_th_login">Login Name</th>
-                    <th data-test-i18n="test_th_mobile">Mobile</th>
-                    <th data-test-i18n="test_th_batch">Batch</th>
-                    <th data-test-i18n="test_th_language">Language</th>
-                    <th data-test-i18n="test_th_status">Status</th>
-                    <th data-test-i18n="test_th_actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="testStudentsTableBody"></tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="form-card admin-block admin-span">
-            <div class="row-between">
-              <div>
-                <h2 data-test-i18n="test_rewrite_requests_title">Student Rewrite Requests</h2>
-                <p class="form-note" data-test-i18n="test_rewrite_requests_hint">Students who requested to retake their tests. Approve or reject their requests.</p>
-              </div>
-            </div>
-            <p id="testRewriteStatus" class="status-text" role="status"></p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th data-test-i18n="test_th_candidate">Student</th>
-                    <th data-test-i18n="test_label_test_title">Test</th>
-                    <th>Score</th>
-                    <th data-test-i18n="test_portal_submitted_at">Requested At</th>
-                    <th data-test-i18n="test_th_status">Status</th>
-                    <th data-test-i18n="test_th_actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="testRewriteRequestsBody"></tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="form-card admin-block admin-span">
-            <div class="row-between">
-              <div>
-                <h2 data-test-i18n="test_builder_title">Online Test Builder</h2>
-                <p class="form-note" data-test-i18n="test_builder_hint">Create one active MCQ test at a time. Students can start within the time window and finish within their timer.</p>
-              </div>
-              <div class="row-inline">
-                <label class="btn btn-outline file-button">
-                  <span data-test-i18n="test_btn_import_question_pdf">Import Question PDF</span>
-                  <input id="testPdfInput" type="file" accept=".pdf,application/pdf" hidden>
+                <label><span data-i18n="label_hero_title">Hero Title</span>
+                  <input type="text" name="heroTitle" required>
                 </label>
-                <label class="btn btn-outline file-button">
-                  <span data-test-i18n="test_btn_import_answer_pdf">Import Answer Key PDF</span>
-                  <input id="answerKeyPdfInput" type="file" accept=".pdf,application/pdf" hidden>
+                <label><span data-i18n="label_hero_text">Hero Text</span>
+                  <textarea name="heroText" rows="3" required></textarea>
                 </label>
-              </div>
-            </div>
-            <form id="testBuilderForm">
-              <input id="testBuilderId" type="hidden" value="">
-              <div class="test-builder-grid">
-                <label><span data-test-i18n="test_label_test_title">Test Title</span>
+                <label><span data-i18n="label_announcement">Announcement</span>
+                  <textarea name="announcement" rows="3" required></textarea>
+                </label>
+                <label><span data-i18n="label_address">Address</span>
+                  <input type="text" name="address" required>
+                </label>
+                <label><span data-i18n="label_phone">Phone</span>
+                  <input type="text" name="phone" required>
+                </label>
+                <label><span data-i18n="label_email">Email</span>
+                  <input type="email" name="email" required>
+                </label>
+                <label><span data-i18n="label_instagram_url">Instagram Profile URL</span>
+                  <input type="url" name="instagramProfileUrl" required placeholder="https://www.instagram.com/visioneduacademy/">
+                </label>
+                <label><span data-i18n="label_facebook_url">Facebook Page URL</span>
+                  <input type="text" name="facebookProfileUrl" required placeholder="Vision Education Academy or https://www.facebook.com/visioneducacademy">
+                </label>
+                <label><span data-i18n="label_marquee_upload">Marquee Image Links</span>
+                  <textarea id="marqueeImageLinks" name="marqueeImageLinks" rows="4" data-i18n-placeholder="placeholder_marquee_images" placeholder="https://example.com/photo-1.jpg&#10;https://example.com/photo-2.jpg"></textarea>
+                </label>
+                <p class="form-note" data-i18n="admin_marquee_upload_hint">Paste one image link per line. These links will be shown only on the home page marquee.</p>
+                <div id="marqueeAdminList" class="marquee-upload-list"></div>
+                <button type="submit" class="btn btn-primary" data-i18n="btn_save_site">Save Website Information</button>
+                <p id="contentStatus" class="status-text" role="status"></p>
+              </form>
+            </section>
+
+            <section class="form-card admin-block">
+              <h2 data-i18n="admin_news_title">News Management</h2>
+              <form id="newsForm">
+                <label><span data-i18n="label_news_title">News Title</span>
                   <input type="text" name="title" required>
                 </label>
+                <label><span data-i18n="label_news_date">News Date</span>
+                  <input type="date" name="date" required>
+                </label>
+                <label><span data-i18n="label_summary">Summary</span>
+                  <textarea name="summary" rows="3" required></textarea>
+                </label>
+                <button type="submit" class="btn btn-primary" data-i18n="btn_add_news">Add News</button>
+              </form>
+              <p id="newsStatus" class="status-text" role="status"></p>
+              <div id="newsAdminList" class="news-list compact"></div>
+            </section>
+
+            <section class="form-card admin-block">
+              <h2 data-i18n="admin_instagram_title">Instagram Posts</h2>
+              <form id="instagramPostForm">
+                <label><span data-i18n="label_instagram_post_url">Instagram Post URL or Embed Code</span>
+                  <input type="text" name="postUrl" required placeholder="https://www.instagram.com/p/XXXXXXXXXXX/">
+                </label>
+                <button type="submit" class="btn btn-primary" data-i18n="btn_add_instagram_post">Add Instagram Post</button>
+              </form>
+              <p class="form-note" data-i18n="admin_instagram_hint">Paste an Instagram post URL or full embed code; it will appear on the home page.</p>
+              <div id="instagramAdminList" class="news-list compact"></div>
+            </section>
+
+            <section class="form-card admin-block admin-span">
+              <div class="row-between">
+                <h2 data-i18n="admin_applications_title">Application Submissions</h2>
+                <div class="row-inline">
+                  <button id="exportApplications" class="btn btn-outline" type="button" data-i18n="btn_export_csv">Export CSV</button>
+                  <button id="clearApplications" class="btn btn-danger" type="button" data-i18n="btn_clear_submissions">Clear Submissions</button>
+                </div>
+              </div>
+              <p id="applicationsStatus" class="status-text" role="status"></p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="th_candidate">Candidate</th>
+                      <th data-i18n="th_father">Father</th>
+                      <th data-i18n="th_mobile">Mobile</th>
+                      <th data-i18n="th_dob">DOB</th>
+                      <th data-i18n="th_category">Category</th>
+                      <th data-i18n="th_submitted">Submitted</th>
+                    </tr>
+                  </thead>
+                  <tbody id="applicationsTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="adminViewTests" class="admin-view-panel hidden">
+          <div class="admin-grid">
+            <section class="form-card admin-block admin-span">
+              <div class="row-between">
+                <div>
+                  <h2 data-test-i18n="test_registrations_title">Online Test Registrations</h2>
+                  <p class="form-note" data-test-i18n="test_registrations_hint">Export pending registrations, verify payment offline, then upload an approval CSV or approve directly.</p>
+                </div>
+                <div class="row-inline">
+                  <button id="exportTestRegistrations" type="button" class="btn btn-outline" data-test-i18n="test_btn_export_registrations">Export Registrations CSV</button>
+                  <button id="downloadApprovalTemplate" type="button" class="btn btn-outline" data-test-i18n="test_btn_download_approval_template">Download Approval CSV Template</button>
+                  <label class="btn btn-outline file-button">
+                    <span data-test-i18n="test_btn_import_approval_csv">Upload Approval CSV</span>
+                    <input id="approvalCsvInput" type="file" accept=".csv" hidden>
+                  </label>
+                </div>
+              </div>
+              <form id="studentApprovalForm" class="student-approval-form">
+                <label><span data-test-i18n="test_label_application">Choose Application</span>
+                  <select name="registrationId" id="studentRegistrationSelect"></select>
+                </label>
+                <label><span data-test-i18n="test_label_student_login_name">Student Login Name</span>
+                  <input type="text" name="loginName" data-test-i18n-placeholder="test_placeholder_login_name" placeholder="Enter login name">
+                </label>
+                <label><span data-test-i18n="test_label_password_override">Password Override</span>
+                  <input type="text" name="tempPassword" minlength="6" data-test-i18n-placeholder="test_placeholder_password_override" placeholder="Leave blank to keep student's registration password">
+                </label>
                 <label><span data-test-i18n="test_label_language">Language</span>
-                  <select name="language" required>
+                  <select name="language">
                     <option value="en" data-test-i18n="test_language_english">English</option>
                     <option value="ta" data-test-i18n="test_language_tamil">Tamil</option>
                   </select>
                 </label>
-                <label><span data-test-i18n="test_label_open_at">Opens At</span>
-                  <input type="datetime-local" name="opensAt" required>
+                <label><span data-test-i18n="test_registration_batch">Batch</span>
+                  <input type="text" name="batchName" data-test-i18n-placeholder="test_placeholder_batch" placeholder="Morning / Evening">
                 </label>
-                <label><span data-test-i18n="test_label_close_at">Closes At</span>
-                  <input type="datetime-local" name="closesAt" required>
-                </label>
-                <label><span data-test-i18n="test_label_duration">Duration (Minutes)</span>
-                  <input type="number" name="durationMinutes" min="1" value="60" required>
-                </label>
+                <button type="submit" class="btn btn-primary" data-test-i18n="test_btn_approve_student">Approve Student</button>
+              </form>
+              <p id="testRegistrationsStatus" class="status-text" role="status"></p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-test-i18n="test_th_candidate">Student</th>
+                      <th data-test-i18n="test_th_login">Login Name</th>
+                      <th data-test-i18n="test_th_mobile">Mobile</th>
+                      <th data-test-i18n="test_th_batch">Batch</th>
+                      <th data-test-i18n="test_th_status">Status</th>
+                      <th data-test-i18n="test_th_actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="testRegistrationsTableBody"></tbody>
+                </table>
               </div>
-              <p class="form-note" data-test-i18n="test_builder_pdf_hint">Upload the question paper PDF first, then upload a separate answer-key PDF for scoring.</p>
-              <div class="row-inline section-end">
-                <button id="resetTestBuilder" type="button" class="btn btn-outline" data-test-i18n="test_btn_clear_form">Clear Form</button>
-              </div>
-              <div id="testImportSummary" class="test-import-summary"></div>
-              <button type="submit" class="btn btn-primary" data-test-i18n="test_btn_save_draft">Save Draft</button>
-              <p id="testBuilderStatus" class="status-text" role="status"></p>
-            </form>
-            <div class="table-wrap section-end">
-              <table>
-                <thead>
-                  <tr>
-                    <th data-test-i18n="test_th_test">Test</th>
-                    <th data-test-i18n="test_th_window">Window</th>
-                    <th data-test-i18n="test_th_duration">Duration</th>
-                    <th data-test-i18n="test_th_questions">Questions</th>
-                    <th data-test-i18n="test_th_status">Status</th>
-                    <th data-test-i18n="test_th_actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="testAdminTestsTableBody"></tbody>
-              </table>
-            </div>
-          </section>
+            </section>
 
-          <section class="form-card admin-block admin-span">
-            <div class="row-between">
-              <div>
-                <h2 data-test-i18n="test_results_title">Test Results</h2>
-                <p class="form-note" data-test-i18n="test_results_hint">Submitted attempts will appear here live for the admin.</p>
+            <section class="form-card admin-block admin-span">
+              <div class="row-between">
+                <h2 data-test-i18n="test_student_access_title">Test Student Access</h2>
               </div>
-              <div class="row-inline">
-                <button id="exportTestResults" type="button" class="btn btn-outline" data-test-i18n="test_btn_export_results">Export Results CSV</button>
-                <button id="clearTestResults" type="button" class="btn btn-danger" data-test-i18n="test_btn_clear_results">Clear Results</button>
+              <p id="testStudentsStatus" class="status-text" role="status"></p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-test-i18n="test_th_candidate">Student</th>
+                      <th data-test-i18n="test_th_login">Login Name</th>
+                      <th data-test-i18n="test_th_mobile">Mobile</th>
+                      <th data-test-i18n="test_th_batch">Batch</th>
+                      <th data-test-i18n="test_th_language">Language</th>
+                      <th data-test-i18n="test_th_status">Status</th>
+                      <th data-test-i18n="test_th_actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="testStudentsTableBody"></tbody>
+                </table>
               </div>
-            </div>
-            <p id="testResultsStatus" class="status-text" role="status"></p>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th data-test-i18n="test_th_candidate">Student</th>
-                    <th data-test-i18n="test_th_test">Test</th>
-                    <th data-test-i18n="test_th_started">Started</th>
-                    <th data-test-i18n="test_th_submitted">Submitted</th>
-                    <th data-test-i18n="test_th_score">Score</th>
-                    <th data-test-i18n="test_portal_attempted">Attempted</th>
-                    <th data-test-i18n="test_th_attempt_status">Attempt Status</th>
-                  </tr>
-                </thead>
-                <tbody id="testAttemptsTableBody"></tbody>
-              </table>
-            </div>
-          </section>
-        </div>
+            </section>
 
-        <div class="section-end">
-          <button id="logoutButton" class="btn btn-outline" type="button" data-i18n="btn_logout">Logout</button>
-        </div>
+            <section class="form-card admin-block admin-span">
+              <div class="row-between">
+                <div>
+                  <h2 data-test-i18n="test_rewrite_requests_title">Student Rewrite Requests</h2>
+                  <p class="form-note" data-test-i18n="test_rewrite_requests_hint">Students who requested to retake their tests. Approve or reject their requests.</p>
+                </div>
+              </div>
+              <p id="testRewriteStatus" class="status-text" role="status"></p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-test-i18n="test_th_candidate">Student</th>
+                      <th data-test-i18n="test_label_test_title">Test</th>
+                      <th data-test-i18n="test_th_score">Score</th>
+                      <th data-test-i18n="test_rewrite_requested_at">Requested At</th>
+                      <th data-test-i18n="test_th_status">Status</th>
+                      <th data-test-i18n="test_th_actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="testRewriteRequestsBody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="form-card admin-block admin-span">
+              <div class="row-between">
+                <div>
+                  <h2 data-test-i18n="test_builder_title">Online Test Builder</h2>
+                  <p class="form-note" data-test-i18n="test_builder_hint">Create one active MCQ test at a time. Students can start within the time window and finish within their timer.</p>
+                </div>
+                <div class="row-inline">
+                  <label class="btn btn-outline file-button">
+                    <span data-test-i18n="test_btn_import_question_pdf">Import Question PDF</span>
+                    <input id="testPdfInput" type="file" accept=".pdf,application/pdf" hidden>
+                  </label>
+                  <label class="btn btn-outline file-button">
+                    <span data-test-i18n="test_btn_import_answer_pdf">Import Answer Key PDF</span>
+                    <input id="answerKeyPdfInput" type="file" accept=".pdf,application/pdf" hidden>
+                  </label>
+                </div>
+              </div>
+              <form id="testBuilderForm">
+                <input id="testBuilderId" type="hidden" value="">
+                <div class="test-builder-grid">
+                  <label><span data-test-i18n="test_label_test_title">Test Title</span>
+                    <input type="text" name="title" required>
+                  </label>
+                  <label><span data-test-i18n="test_label_language">Language</span>
+                    <select name="language" required>
+                      <option value="en" data-test-i18n="test_language_english">English</option>
+                      <option value="ta" data-test-i18n="test_language_tamil">Tamil</option>
+                    </select>
+                  </label>
+                  <label><span data-test-i18n="test_label_open_at">Opens At</span>
+                    <input type="datetime-local" name="opensAt" required>
+                  </label>
+                  <label><span data-test-i18n="test_label_close_at">Closes At</span>
+                    <input type="datetime-local" name="closesAt" required>
+                  </label>
+                  <label><span data-test-i18n="test_label_duration">Duration (Minutes)</span>
+                    <input type="number" name="durationMinutes" min="1" value="60" required>
+                  </label>
+                </div>
+                <p class="form-note" data-test-i18n="test_builder_pdf_hint">Upload the question paper PDF first, then upload a separate answer-key PDF for scoring.</p>
+                <div class="row-inline section-end">
+                  <button id="resetTestBuilder" type="button" class="btn btn-outline" data-test-i18n="test_btn_clear_form">Clear Form</button>
+                </div>
+                <div id="testImportSummary" class="test-import-summary"></div>
+                <button type="submit" class="btn btn-primary" data-test-i18n="test_btn_save_draft">Save Draft</button>
+                <p id="testBuilderStatus" class="status-text" role="status"></p>
+              </form>
+              <div class="table-wrap section-end">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-test-i18n="test_th_test">Test</th>
+                      <th data-test-i18n="test_th_window">Window</th>
+                      <th data-test-i18n="test_th_duration">Duration</th>
+                      <th data-test-i18n="test_th_questions">Questions</th>
+                      <th data-test-i18n="test_th_status">Status</th>
+                      <th data-test-i18n="test_th_actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="testAdminTestsTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="form-card admin-block admin-span">
+              <div class="row-between">
+                <div>
+                  <h2 data-test-i18n="test_results_title">Test Results</h2>
+                  <p class="form-note" data-test-i18n="test_results_hint">Submitted attempts will appear here live for the admin.</p>
+                </div>
+                <div class="row-inline">
+                  <button id="exportTestResults" type="button" class="btn btn-outline" data-test-i18n="test_btn_export_results">Export Results CSV</button>
+                  <button id="clearTestResults" type="button" class="btn btn-danger" data-test-i18n="test_btn_clear_results">Clear Results</button>
+                </div>
+              </div>
+              <p id="testResultsStatus" class="status-text" role="status"></p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-test-i18n="test_th_candidate">Student</th>
+                      <th data-test-i18n="test_th_test">Test</th>
+                      <th data-test-i18n="test_th_started">Started</th>
+                      <th data-test-i18n="test_th_submitted">Submitted</th>
+                      <th data-test-i18n="test_th_score">Score</th>
+                      <th data-test-i18n="test_portal_attempted">Attempted</th>
+                      <th data-test-i18n="test_th_attempt_status">Attempt Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="testAttemptsTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="adminViewFees" class="admin-view-panel hidden">
+          <div class="admin-grid">
+            <section class="form-card admin-block admin-span">
+              <div class="row-between">
+                <div>
+                  <h2 data-test-i18n="test_fees_title">Fees Management</h2>
+                  <p class="form-note" data-test-i18n="test_fees_hint">Track total fees, paid amounts, outstanding balance, and payment notes for each approved test student.</p>
+                </div>
+              </div>
+              <div class="summary-grid portal-summary-grid">
+                <div class="summary-chip"><span data-test-i18n="test_fees_total_students">Students</span><strong id="feesSummaryStudents">0</strong></div>
+                <div class="summary-chip"><span data-test-i18n="test_fees_paid_students">Fully Paid</span><strong id="feesSummaryPaid">0</strong></div>
+                <div class="summary-chip"><span data-test-i18n="test_fees_collected_total">Collected</span><strong id="feesSummaryCollected">Rs. 0</strong></div>
+                <div class="summary-chip"><span data-test-i18n="test_fees_due_total">Outstanding</span><strong id="feesSummaryDue">Rs. 0</strong></div>
+              </div>
+            </section>
+
+            <section class="form-card admin-block">
+              <h2 data-test-i18n="test_fees_update_title">Update Student Fee</h2>
+              <form id="feeManagementForm">
+                <div class="fee-form-grid">
+                  <label><span data-test-i18n="test_fees_select_student">Choose Student</span>
+                    <select name="studentId" id="feeStudentSelect"></select>
+                  </label>
+                  <label><span data-test-i18n="test_fees_total_amount">Total Fee Amount</span>
+                    <input type="number" name="totalAmount" min="0" step="0.01" value="800" readonly>
+                  </label>
+                  <label><span data-test-i18n="test_fees_paid_amount">Paid Amount</span>
+                    <input type="number" name="paidAmount" min="0" step="0.01" value="0" readonly>
+                  </label>
+                  <label><span data-test-i18n="test_fees_due_amount">Due Amount</span>
+                    <input type="text" id="feeDueAmount" value="Rs. 800" readonly>
+                  </label>
+                  <label><span data-test-i18n="test_fees_status">Status</span>
+                    <select name="status" id="feeStatusSelect">
+                      <option value="paid" data-test-i18n="test_fees_status_paid">Paid</option>
+                      <option value="unpaid" data-test-i18n="test_fees_status_unpaid">Not Paid</option>
+                    </select>
+                  </label>
+                  <label><span data-test-i18n="test_fees_last_paid">Last Payment Date</span>
+                    <input type="date" name="lastPaidAt">
+                  </label>
+                </div>
+                <label><span data-test-i18n="test_fees_notes">Notes</span>
+                  <textarea name="notes" rows="4" data-test-i18n-placeholder="test_fees_notes_placeholder" placeholder="Optional notes about payment follow-up or balance."></textarea>
+                </label>
+                <div class="row-inline">
+                  <button type="submit" class="btn btn-primary" data-test-i18n="test_fees_save">Save Fee Details</button>
+                  <button type="button" id="clearFeeForm" class="btn btn-outline" data-test-i18n="test_fees_clear">Clear Form</button>
+                </div>
+                <p id="feesStatus" class="status-text" role="status"></p>
+              </form>
+            </section>
+
+            <section class="form-card admin-block">
+              <h2 data-test-i18n="test_fees_help_title">Fees Page</h2>
+              <p class="form-note" data-test-i18n="test_fees_help_text">Use this page to update collected amounts after offline payment and keep an outstanding balance record for each approved student.</p>
+            </section>
+
+            <section class="form-card admin-block admin-span">
+              <div class="row-between">
+                <h2 data-test-i18n="test_fees_table_title">Student Fee Records</h2>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-test-i18n="test_th_candidate">Student</th>
+                      <th data-test-i18n="test_th_login">Login Name</th>
+                      <th data-test-i18n="test_th_batch">Batch</th>
+                      <th data-test-i18n="test_fees_total_amount">Total Fee Amount</th>
+                      <th data-test-i18n="test_fees_paid_amount">Paid Amount</th>
+                      <th data-test-i18n="test_fees_due_amount">Due Amount</th>
+                      <th data-test-i18n="test_fees_status">Status</th>
+                      <th data-test-i18n="test_fees_last_paid">Last Payment Date</th>
+                      <th data-test-i18n="test_th_actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="feesStudentsTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
       </section>
     </div>
   </main>
@@ -351,11 +454,12 @@
 
   <script src="assets/js/firebase-config.js?v=25"></script>
   <script src="assets/js/data.js?v=22"></script>
-  <script src="assets/js/i18n.js?v=23"></script>
-  <script src="assets/js/admin.js?v=24"></script>
-  <script src="assets/js/test-shared.js?v=30"></script>
-  <script src="assets/js/test-api.js?v=35"></script>
-  <script src="assets/js/test-store.js?v=25"></script>
-  <script src="assets/js/test-admin.js?v=27"></script>
+  <script src="assets/js/i18n.js?v=24"></script>
+  <script src="assets/js/admin.js?v=25"></script>
+  <script src="assets/js/test-shared.js?v=35"></script>
+  <script src="assets/js/test-api.js?v=37"></script>
+  <script src="assets/js/test-store.js?v=29"></script>
+  <script src="assets/js/test-admin.js?v=28"></script>
+  <script src="assets/js/admin-test-tools.js?v=4"></script>
 </body>
 </html>
