@@ -4,6 +4,7 @@ const REGISTRATIONS_COLLECTION = "test_registrations";
 const STUDENTS_COLLECTION = "students";
 const TESTS_COLLECTION = "tests";
 const ATTEMPTS_COLLECTION = "attempts";
+const REWRITE_REQUESTS_COLLECTION = "rewrite_requests";
 
 function clean(value) {
   return String(value || "").trim();
@@ -85,6 +86,22 @@ async function getAttemptForStudent(db, studentId, testId) {
   };
 }
 
+async function getRewriteRequestForStudent(db, studentId, testId) {
+  const docId = getAttemptDocumentId(studentId, testId);
+  if (!docId || docId === "__") {
+    return null;
+  }
+  const doc = await db.collection(REWRITE_REQUESTS_COLLECTION).doc(docId).get();
+  if (!doc.exists) {
+    return null;
+  }
+  return {
+    id: doc.id,
+    ref: doc.ref,
+    data: doc.data() || {}
+  };
+}
+
 function buildPublicTest(testDoc) {
   const data = testDoc.data || {};
   return {
@@ -116,6 +133,7 @@ module.exports = {
   STUDENTS_COLLECTION,
   TESTS_COLLECTION,
   ATTEMPTS_COLLECTION,
+  REWRITE_REQUESTS_COLLECTION,
   clean,
   normalizeLanguage,
   buildPublicTest,
@@ -124,5 +142,6 @@ module.exports = {
   getActiveTest,
   getAttemptDocumentId,
   getAttemptForStudent,
+  getRewriteRequestForStudent,
   clampExpiry
 };

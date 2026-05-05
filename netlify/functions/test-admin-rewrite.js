@@ -2,6 +2,7 @@
 
 const { getDb, verifyAdminRequest } = require("./_lib/firebase");
 const { json, noContent, readJsonBody } = require("./_lib/http");
+const { REWRITE_REQUESTS_COLLECTION } = require("./_lib/test-data");
 
 function clean(value) {
   return String(value || "").trim();
@@ -18,6 +19,7 @@ exports.handler = async function (event) {
 
   try {
     const adminUser = await verifyAdminRequest(event);
+    const db = getDb();
     const body = await readJsonBody(event);
     const action = clean(body.action).toLowerCase();
     const requestId = clean(body.requestId);
@@ -30,14 +32,18 @@ exports.handler = async function (event) {
       return json(400, { error: "Unsupported rewrite action." });
     }
 
-    const attemptRef = getDb().collection("attempts").doc(requestId);
+    const requestRef = db.collection(REWRITE_REQUESTS_COLLECTION).doc(requestId);
+    const requestSnapshot = await requestRef.get();
+    const requestData = requestSnapshot.exists ? (requestSnapshot.data() || {}) : {};
+    const attemptRef = db.collection("attempts").doc(clean(requestData.attemptId) || requestId);
     const attemptSnapshot = await attemptRef.get();
     if (!attemptSnapshot.exists) {
       return json(404, { error: "Rewrite request not found." });
     }
 
     const attempt = attemptSnapshot.data() || {};
-    if (clean(attempt.rewriteRequestStatus).toLowerCase() !== "pending") {
+    const currentStatus = clean(requestData.status) || clean(attempt.rewriteRequestStatus);
+    if (currentStatus.toLowerCase() !== "pending") {
       return json(409, {
         error: action === "approve"
           ? "Only pending retest requests can be approved."
@@ -53,6 +59,15 @@ exports.handler = async function (event) {
       rewriteReviewedBy: clean(adminUser && adminUser.email) || "visionedudomain@gmail.com",
       updatedAt: now
     }, { merge: true });
+    if (requestSnapshot.exists) {
+      await requestRef.set({
+        status: action === "approve" ? "approved" : "rejected",
+        reviewedAt: now,
+        reviewedAtMs: Date.now(),
+        reviewedBy: clean(adminUser && adminUser.email) || "visionedudomain@gmail.com",
+        updatedAt: now
+      }, { merge: true });
+    }
 
     return json(200, {
       ok: true,

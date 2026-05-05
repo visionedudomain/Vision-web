@@ -10,6 +10,7 @@
   var PUBLIC_TESTS_COLLECTION = "published_tests";
   var ATTEMPTS_COLLECTION = "attempts";
   var ANSWER_KEYS_COLLECTION = "test_answer_keys";
+  var REWRITE_REQUESTS_COLLECTION = "rewrite_requests";
 
   var studentState = {
     api: null,
@@ -388,6 +389,29 @@
     };
   }
 
+  function mapRewriteRequestDocument(snapshot) {
+    var data = snapshot.data() || {};
+    return {
+      id: snapshot.id,
+      studentId: clean(data.studentId),
+      studentDisplayName: clean(data.studentDisplayName),
+      studentLoginName: clean(data.studentLoginName),
+      testId: clean(data.testId),
+      testTitle: clean(data.testTitle),
+      language: normalizeLanguage(data.language),
+      attemptId: clean(data.attemptId),
+      score: Number(data.score || 0),
+      totalQuestions: Number(data.totalQuestions || 0),
+      status: clean(data.status || data.rewriteRequestStatus),
+      requestedAt: clean(data.requestedAt || data.rewriteRequestedAt),
+      requestedAtMs: Number(data.requestedAtMs || data.rewriteRequestedAtMs || 0),
+      reviewedAt: clean(data.reviewedAt || data.rewriteReviewedAt),
+      reviewedAtMs: Number(data.reviewedAtMs || data.rewriteReviewedAtMs || 0),
+      reviewedBy: clean(data.reviewedBy || data.rewriteReviewedBy),
+      updatedAt: clean(data.updatedAt)
+    };
+  }
+
   function scoreAnswers(answerKeyQuestions, answers) {
     var safeAnswers = answers && typeof answers === "object" ? answers : {};
     var correctCount = 0;
@@ -414,6 +438,10 @@
   }
 
   function getAttemptDocumentId(studentId, testId) {
+    return clean(studentId) + "__" + clean(testId);
+  }
+
+  function getRewriteRequestDocumentId(studentId, testId) {
     return clean(studentId) + "__" + clean(testId);
   }
 
@@ -527,6 +555,26 @@
       return false;
     });
     return matchedDoc;
+  }
+
+  async function getRewriteRequestSnapshot(studentId, testId) {
+    await ensureStudentFirebase();
+    var requestId = getRewriteRequestDocumentId(studentId, testId);
+    if (!requestId || requestId === "__") {
+      return null;
+    }
+    return studentState.api.getDoc(studentState.api.doc(studentState.db, REWRITE_REQUESTS_COLLECTION, requestId));
+  }
+
+  async function getRewriteRequestSnapshotIfAvailable(studentId, testId) {
+    try {
+      return await getRewriteRequestSnapshot(studentId, testId);
+    } catch (error) {
+      if (isPermissionError(error)) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   async function getStudentAuthEmail(loginNameNormalized) {
@@ -665,13 +713,76 @@
     return buildBasicSummary(normalizedResult, submittedValue);
   }
 
-  function decorateSummaryWithRewriteRequest(summary, attempt) {
+  function isRewriteRequestRelevant(attempt, rewriteRequest) {
+    var safeAttempt = attempt && typeof attempt === "object" ? attempt : {};
+    var safeRequest = rewriteRequest && typeof rewriteRequest === "object" ? rewriteRequest : {};
+    var requestTime = Number(safeRequest.requestedAtMs || 0);
+    if (!requestTime) {
+      return Boolean(clean(safeRequest.status));
+    }
+    return requestTime >= Number(safeAttempt.startedAtMs || 0);
+  }
+
+  function getEffectiveRewriteStatus(attempt, rewriteRequest) {
+    var attemptStatus = clean(attempt && attempt.rewriteRequestStatus).toLowerCase();
+    if (attemptStatus) {
+      return attemptStatus;
+    }
+    if (!isRewriteRequestRelevant(attempt, rewriteRequest)) {
+      return "";
+    }
+    return clean(rewriteRequest && rewriteRequest.status).toLowerCase();
+  }
+
+  function decorateSummaryWithRewriteRequest(summary, attempt, rewriteRequest) {
     var safeSummary = summary && typeof summary === "object" ? summary : {};
     var safeAttempt = attempt && typeof attempt === "object" ? attempt : {};
-    safeSummary.rewriteRequestStatus = clean(safeAttempt.rewriteRequestStatus);
-    safeSummary.rewriteRequestedAt = clean(safeAttempt.rewriteRequestedAt);
-    safeSummary.rewriteReviewedAt = clean(safeAttempt.rewriteReviewedAt);
+    var safeRewriteRequest = rewriteRequest && typeof rewriteRequest === "object" ? rewriteRequest : {};
+    var rewriteStatus = clean(safeAttempt.rewriteRequestStatus);
+    var rewriteRequestedAt = clean(safeAttempt.rewriteRequestedAt);
+    var rewriteReviewedAt = clean(safeAttempt.rewriteReviewedAt);
+
+    if (isRewriteRequestRelevant(safeAttempt, safeRewriteRequest)) {
+      if (!rewriteStatus) {
+        rewriteStatus = clean(safeRewriteRequest.status);
+      }
+      if (!rewriteRequestedAt) {
+        rewriteRequestedAt = clean(safeRewriteRequest.requestedAt);
+      }
+      if (!rewriteReviewedAt) {
+        rewriteReviewedAt = clean(safeRewriteRequest.reviewedAt);
+      }
+    }
+
+    safeSummary.rewriteRequestStatus = rewriteStatus;
+    safeSummary.rewriteRequestedAt = rewriteRequestedAt;
+    safeSummary.rewriteReviewedAt = rewriteReviewedAt;
     return safeSummary;
+  }
+
+  function buildRewriteRequestPayload(student, publicTest, attempt, requestedAt) {
+    var safeStudent = student && typeof student === "object" ? student : {};
+    var safeTest = publicTest && typeof publicTest === "object" ? publicTest : {};
+    var safeAttempt = attempt && typeof attempt === "object" ? attempt : {};
+    var requestedAtValue = clean(requestedAt) || new Date().toISOString();
+    return {
+      studentId: clean(safeStudent.id),
+      studentDisplayName: clean(safeStudent.displayName),
+      studentLoginName: clean(safeStudent.loginName),
+      testId: clean(safeTest.id),
+      testTitle: clean(safeTest.title),
+      language: clean(safeTest.language),
+      attemptId: getAttemptDocumentId(safeStudent.id, safeTest.id),
+      score: Number(safeAttempt.score || 0),
+      totalQuestions: Number(safeAttempt.totalQuestions || safeTest.questionCount || 0),
+      status: "pending",
+      requestedAt: requestedAtValue,
+      requestedAtMs: Date.now(),
+      reviewedAt: "",
+      reviewedAtMs: 0,
+      reviewedBy: "",
+      updatedAt: requestedAtValue
+    };
   }
 
   function buildStoredAttemptSummary(attempt) {
@@ -902,7 +1013,12 @@
 
     if (attemptSnapshot && attemptSnapshot.exists()) {
       var attempt = mapAttemptDocument(attemptSnapshot);
-      if (attempt.rewriteRequestStatus === "approved") {
+      var rewriteRequestSnapshot = await getRewriteRequestSnapshotIfAvailable(sessionPayload.student.id, publicTest.id);
+      var rewriteRequest = rewriteRequestSnapshot && rewriteRequestSnapshot.exists()
+        ? mapRewriteRequestDocument(rewriteRequestSnapshot)
+        : null;
+      var effectiveRewriteStatus = getEffectiveRewriteStatus(attempt, rewriteRequest);
+      if (effectiveRewriteStatus === "approved") {
         if (now < opensAt) {
           return {
             ok: true,
@@ -948,7 +1064,7 @@
           state: "submitted",
           student: sessionPayload.student,
           test: publicTest,
-          summary: decorateSummaryWithRewriteRequest(submittedSummary, attempt),
+          summary: decorateSummaryWithRewriteRequest(submittedSummary, attempt, rewriteRequest),
           message: "Your test has already been submitted."
         };
       }
@@ -959,7 +1075,7 @@
           state: "submitted",
           student: sessionPayload.student,
           test: publicTest,
-          summary: decorateSummaryWithRewriteRequest(await finalizeExpiredAttempt(attemptRef, attempt), attempt),
+          summary: decorateSummaryWithRewriteRequest(await finalizeExpiredAttempt(attemptRef, attempt), attempt, rewriteRequest),
           message: "Your test has already been submitted."
         };
       }
@@ -1202,29 +1318,45 @@
     }
 
     var attempt = mapAttemptDocument(attemptSnapshot);
+    var rewriteRequestSnapshot = await getRewriteRequestSnapshotIfAvailable(activePayload.student.id, activePayload.test.id);
+    var rewriteRequest = rewriteRequestSnapshot && rewriteRequestSnapshot.exists()
+      ? mapRewriteRequestDocument(rewriteRequestSnapshot)
+      : null;
+    var effectiveRewriteStatus = getEffectiveRewriteStatus(attempt, rewriteRequest);
     if (attempt.status === "started") {
       throw createError("Finish and submit the current test before requesting a retest.", "ATTEMPT_IN_PROGRESS");
     }
-    if (attempt.rewriteRequestStatus === "pending") {
+    if (effectiveRewriteStatus === "pending") {
       throw createError(window.VisionTestI18n ? window.VisionTestI18n.t("test_rewrite_already_requested", "You have already requested to retake this test.") : "You have already requested to retake this test.", "ALREADY_REQUESTED");
     }
-    if (attempt.rewriteRequestStatus === "approved") {
+    if (effectiveRewriteStatus === "approved") {
       throw createError(window.VisionTestI18n ? window.VisionTestI18n.t("test_rewrite_approved_ready", "Your retest has already been approved. Log in again and start the test.") : "Your retest has already been approved. Log in again and start the test.", "ALREADY_APPROVED");
     }
 
     var requestedAt = new Date().toISOString();
-    await studentState.api.setDoc(attemptSnapshot.ref, {
-      rewriteRequestStatus: "pending",
-      rewriteRequestedAt: requestedAt,
-      rewriteRequestedAtMs: Date.now(),
-      rewriteReviewedAt: "",
-      rewriteReviewedAtMs: 0,
-      rewriteReviewedBy: "",
-      updatedAt: requestedAt
-    }, { merge: true });
+    var requestId = getRewriteRequestDocumentId(activePayload.student.id, activePayload.test.id);
+    var requestRef = studentState.api.doc(studentState.db, REWRITE_REQUESTS_COLLECTION, requestId);
+    await studentState.api.setDoc(requestRef, buildRewriteRequestPayload(activePayload.student, activePayload.test, attempt, requestedAt), { merge: true });
+
+    try {
+      await studentState.api.setDoc(attemptSnapshot.ref, {
+        rewriteRequestStatus: "pending",
+        rewriteRequestedAt: requestedAt,
+        rewriteRequestedAtMs: Date.now(),
+        rewriteReviewedAt: "",
+        rewriteReviewedAtMs: 0,
+        rewriteReviewedBy: "",
+        updatedAt: requestedAt
+      }, { merge: true });
+    } catch (error) {
+      if (!isPermissionError(error)) {
+        throw error;
+      }
+    }
 
     return {
       ok: true,
+      requestId: requestId,
       status: "pending",
       requestedAt: requestedAt
     };

@@ -2,7 +2,7 @@
 
 const { getAuth, getDb } = require("./_lib/firebase");
 const { json, noContent, readJsonBody } = require("./_lib/http");
-const { clean, getAttemptForStudent } = require("./_lib/test-data");
+const { clean, getAttemptDocumentId, getAttemptForStudent, getRewriteRequestForStudent, REWRITE_REQUESTS_COLLECTION } = require("./_lib/test-data");
 
 async function verifyStudentRequest(event) {
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
@@ -45,19 +45,40 @@ exports.handler = async function (event) {
     if (!attempt) {
       return json(404, { error: "No submitted test attempt was found for this student." });
     }
+    const existingRewriteRequest = await getRewriteRequestForStudent(db, studentSnapshot.id, requestedTestId);
 
     const attemptStatus = clean(attempt.data.status);
     if (attemptStatus === "started") {
       return json(409, { error: "Finish and submit the current test before requesting a retest." });
     }
-    if (clean(attempt.data.rewriteRequestStatus) === "pending") {
+    const currentRewriteStatus = clean(attempt.data.rewriteRequestStatus) || clean(existingRewriteRequest && existingRewriteRequest.data && existingRewriteRequest.data.status);
+    if (currentRewriteStatus === "pending") {
       return json(409, { error: "You have already requested to retake this test." });
     }
-    if (clean(attempt.data.rewriteRequestStatus) === "approved") {
+    if (currentRewriteStatus === "approved") {
       return json(409, { error: "Your retest has already been approved. Log in again and start the test." });
     }
 
     const requestedAt = new Date().toISOString();
+    const requestId = getAttemptDocumentId(studentSnapshot.id, requestedTestId);
+    await db.collection(REWRITE_REQUESTS_COLLECTION).doc(requestId).set({
+      studentId: studentSnapshot.id,
+      studentDisplayName: clean((studentSnapshot.data() || {}).displayName),
+      studentLoginName: clean((studentSnapshot.data() || {}).loginName),
+      testId: requestedTestId,
+      testTitle: clean((activeTestSnapshot.data() || {}).title),
+      language: clean((activeTestSnapshot.data() || {}).language),
+      attemptId: requestId,
+      score: Number(attempt.data.score || 0),
+      totalQuestions: Number(attempt.data.totalQuestions || 0),
+      status: "pending",
+      requestedAt: requestedAt,
+      requestedAtMs: Date.now(),
+      reviewedAt: "",
+      reviewedAtMs: 0,
+      reviewedBy: "",
+      updatedAt: requestedAt
+    }, { merge: true });
     await attempt.ref.set({
       rewriteRequestStatus: "pending",
       rewriteRequestedAt: requestedAt,
@@ -70,6 +91,7 @@ exports.handler = async function (event) {
 
     return json(200, {
       ok: true,
+      requestId,
       status: "pending",
       requestedAt
     });

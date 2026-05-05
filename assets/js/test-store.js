@@ -6,6 +6,7 @@
   var STUDENTS_COLLECTION = "students";
   var TESTS_COLLECTION = "tests";
   var ATTEMPTS_COLLECTION = "attempts";
+  var REWRITE_REQUESTS_COLLECTION = "rewrite_requests";
   var LOGIN_INDEX_COLLECTION = "student_login_index";
   var PUBLIC_TESTS_COLLECTION = "published_tests";
   var ANSWER_KEYS_COLLECTION = "test_answer_keys";
@@ -509,6 +510,29 @@
       rewriteReviewedAt: data.rewriteReviewedAt || "",
       rewriteReviewedAtMs: Number(data.rewriteReviewedAtMs || 0),
       rewriteReviewedBy: clean(data.rewriteReviewedBy)
+    };
+  }
+
+  function mapRewriteRequestDocument(snapshot) {
+    var data = snapshot.data() || {};
+    return {
+      id: snapshot.id,
+      studentId: clean(data.studentId),
+      studentDisplayName: clean(data.studentDisplayName),
+      studentLoginName: clean(data.studentLoginName),
+      testId: clean(data.testId),
+      testTitle: clean(data.testTitle),
+      language: normalizeLanguage(data.language),
+      attemptId: clean(data.attemptId),
+      score: Number(data.score || 0),
+      totalQuestions: Number(data.totalQuestions || 0),
+      status: normalizeStatus(data.status || data.rewriteRequestStatus, ""),
+      requestedAt: data.requestedAt || data.rewriteRequestedAt || "",
+      requestedAtMs: Number(data.requestedAtMs || data.rewriteRequestedAtMs || 0),
+      reviewedAt: data.reviewedAt || data.rewriteReviewedAt || "",
+      reviewedAtMs: Number(data.reviewedAtMs || data.rewriteReviewedAtMs || 0),
+      reviewedBy: clean(data.reviewedBy || data.rewriteReviewedBy),
+      updatedAt: data.updatedAt || ""
     };
   }
 
@@ -1167,13 +1191,32 @@
       return [];
     }
 
-    return getAttempts().filter(function (attempt) {
-      return Boolean(clean(attempt.rewriteRequestStatus));
-    }).sort(function (left, right) {
-      return Number(right.rewriteRequestedAtMs || 0) - Number(left.rewriteRequestedAtMs || 0);
-    }).map(function (attempt) {
-      return {
+    var mapped = {};
+    var rewriteSnapshot = await state.api.getDocs(state.api.collection(state.db, REWRITE_REQUESTS_COLLECTION));
+    rewriteSnapshot.docs.map(mapRewriteRequestDocument).forEach(function (request) {
+      mapped[request.id] = {
+        id: request.id,
+        attemptId: clean(request.attemptId) || request.id,
+        studentId: request.studentId,
+        studentName: request.studentDisplayName,
+        studentLoginName: request.studentLoginName,
+        testId: request.testId,
+        testTitle: request.testTitle,
+        score: String(request.score || 0) + " / " + String(request.totalQuestions || 0),
+        requestedAt: request.requestedAt || "",
+        requestedAtMs: Number(request.requestedAtMs || 0),
+        reviewedAt: request.reviewedAt || "",
+        reviewedBy: request.reviewedBy || "",
+        status: request.status || "pending"
+      };
+    });
+
+    getAttempts().filter(function (attempt) {
+      return Boolean(clean(attempt.rewriteRequestStatus)) && !mapped[attempt.id];
+    }).forEach(function (attempt) {
+      mapped[attempt.id] = {
         id: attempt.id,
+        attemptId: attempt.id,
         studentId: attempt.studentId,
         studentName: attempt.studentDisplayName,
         studentLoginName: attempt.studentLoginName,
@@ -1181,10 +1224,17 @@
         testTitle: attempt.testTitle,
         score: String(attempt.score || 0) + " / " + String(attempt.totalQuestions || 0),
         requestedAt: attempt.rewriteRequestedAt || "",
+        requestedAtMs: Number(attempt.rewriteRequestedAtMs || 0),
         reviewedAt: attempt.rewriteReviewedAt || "",
         reviewedBy: attempt.rewriteReviewedBy || "",
         status: attempt.rewriteRequestStatus || "pending"
       };
+    });
+
+    return Object.keys(mapped).map(function (key) {
+      return mapped[key];
+    }).sort(function (left, right) {
+      return Number(right.requestedAtMs || 0) - Number(left.requestedAtMs || 0);
     });
   }
 
@@ -1197,14 +1247,18 @@
       throw new Error("Rewrite request not found.");
     }
 
-    var attemptRef = state.api.doc(state.db, ATTEMPTS_COLLECTION, targetId);
+    var requestRef = state.api.doc(state.db, REWRITE_REQUESTS_COLLECTION, targetId);
+    var requestSnapshot = await state.api.getDoc(requestRef);
+    var rewriteRequest = requestSnapshot.exists() ? mapRewriteRequestDocument(requestSnapshot) : null;
+    var attemptRef = state.api.doc(state.db, ATTEMPTS_COLLECTION, clean(rewriteRequest && rewriteRequest.attemptId) || targetId);
     var attemptSnapshot = await state.api.getDoc(attemptRef);
     if (!attemptSnapshot.exists()) {
       throw new Error("Rewrite request not found.");
     }
 
     var attempt = mapAttemptDocument(attemptSnapshot);
-    if (attempt.rewriteRequestStatus !== "pending") {
+    var currentStatus = clean(rewriteRequest && rewriteRequest.status) || clean(attempt.rewriteRequestStatus);
+    if (currentStatus !== "pending") {
       throw new Error("Only pending retest requests can be approved.");
     }
 
@@ -1216,6 +1270,15 @@
       rewriteReviewedBy: clean(state.currentUser && state.currentUser.email),
       updatedAt: now
     }, { merge: true });
+    if (rewriteRequest) {
+      await state.api.setDoc(requestRef, {
+        status: "approved",
+        reviewedAt: now,
+        reviewedAtMs: Date.now(),
+        reviewedBy: clean(state.currentUser && state.currentUser.email),
+        updatedAt: now
+      }, { merge: true });
+    }
 
     return {
       ok: true,
@@ -1233,14 +1296,18 @@
       throw new Error("Rewrite request not found.");
     }
 
-    var attemptRef = state.api.doc(state.db, ATTEMPTS_COLLECTION, targetId);
+    var requestRef = state.api.doc(state.db, REWRITE_REQUESTS_COLLECTION, targetId);
+    var requestSnapshot = await state.api.getDoc(requestRef);
+    var rewriteRequest = requestSnapshot.exists() ? mapRewriteRequestDocument(requestSnapshot) : null;
+    var attemptRef = state.api.doc(state.db, ATTEMPTS_COLLECTION, clean(rewriteRequest && rewriteRequest.attemptId) || targetId);
     var attemptSnapshot = await state.api.getDoc(attemptRef);
     if (!attemptSnapshot.exists()) {
       throw new Error("Rewrite request not found.");
     }
 
     var attempt = mapAttemptDocument(attemptSnapshot);
-    if (attempt.rewriteRequestStatus !== "pending") {
+    var currentStatus = clean(rewriteRequest && rewriteRequest.status) || clean(attempt.rewriteRequestStatus);
+    if (currentStatus !== "pending") {
       throw new Error("Only pending retest requests can be rejected.");
     }
 
@@ -1252,6 +1319,15 @@
       rewriteReviewedBy: clean(state.currentUser && state.currentUser.email),
       updatedAt: now
     }, { merge: true });
+    if (rewriteRequest) {
+      await state.api.setDoc(requestRef, {
+        status: "rejected",
+        reviewedAt: now,
+        reviewedAtMs: Date.now(),
+        reviewedBy: clean(state.currentUser && state.currentUser.email),
+        updatedAt: now
+      }, { merge: true });
+    }
 
     return {
       ok: true,

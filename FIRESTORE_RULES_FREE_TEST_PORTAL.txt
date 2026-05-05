@@ -26,6 +26,11 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/attempts/$(request.auth.uid + "__" + testId));
     }
 
+    function isOwnRewriteRequestId(requestId) {
+      return request.auth != null
+        && requestId.matches("^" + request.auth.uid + "__[^/]+$");
+    }
+
     function isRewriteRequestUpdate() {
       return hasStudentRecord()
         && resource.data.studentId == request.auth.uid
@@ -200,6 +205,68 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (isApprovedStudent() && hasOwnAttempt(testId));
       allow write: if isAdmin();
+    }
+
+    match /rewrite_requests/{requestId} {
+      allow get: if isAdmin()
+        || (hasStudentRecord() && isOwnRewriteRequestId(requestId));
+
+      allow list: if isAdmin();
+
+      allow create: if hasStudentRecord()
+        && request.resource.data.studentId == request.auth.uid
+        && requestId == request.auth.uid + "__" + request.resource.data.testId
+        && request.resource.data.attemptId == request.auth.uid + "__" + request.resource.data.testId
+        && exists(/databases/$(database)/documents/attempts/$(request.resource.data.attemptId))
+        && get(/databases/$(database)/documents/attempts/$(request.resource.data.attemptId)).data.status != "started"
+        && request.resource.data.studentDisplayName is string
+        && request.resource.data.studentLoginName is string
+        && request.resource.data.testTitle is string
+        && request.resource.data.language is string
+        && request.resource.data.score is int
+        && request.resource.data.totalQuestions is int
+        && request.resource.data.status == "pending"
+        && request.resource.data.requestedAt is string
+        && request.resource.data.requestedAtMs is int
+        && request.resource.data.reviewedAt == ""
+        && request.resource.data.reviewedAtMs == 0
+        && request.resource.data.reviewedBy == ""
+        && request.resource.data.updatedAt is string;
+
+      allow update: if isAdmin()
+        || (
+          hasStudentRecord()
+          && resource.data.studentId == request.auth.uid
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.testId == resource.data.testId
+          && request.resource.data.attemptId == resource.data.attemptId
+          && request.resource.data.studentDisplayName == resource.data.studentDisplayName
+          && request.resource.data.studentLoginName == resource.data.studentLoginName
+          && request.resource.data.testTitle == resource.data.testTitle
+          && request.resource.data.language == resource.data.language
+          && request.resource.data.score == resource.data.score
+          && request.resource.data.totalQuestions == resource.data.totalQuestions
+          && resource.data.status != "pending"
+          && resource.data.status != "approved"
+          && request.resource.data.status == "pending"
+          && request.resource.data.requestedAt is string
+          && request.resource.data.requestedAtMs is int
+          && request.resource.data.reviewedAt == ""
+          && request.resource.data.reviewedAtMs == 0
+          && request.resource.data.reviewedBy == ""
+          && request.resource.data.updatedAt is string
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status",
+            "requestedAt",
+            "requestedAtMs",
+            "reviewedAt",
+            "reviewedAtMs",
+            "reviewedBy",
+            "updatedAt"
+          ])
+        );
+
+      allow delete: if isAdmin();
     }
 
     match /attempts/{attemptId} {

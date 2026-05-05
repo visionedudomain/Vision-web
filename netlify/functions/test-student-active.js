@@ -3,8 +3,25 @@
 const { getAuth, getDb } = require("./_lib/firebase");
 const { verifyStudentSession } = require("./_lib/test-auth");
 const { json, noContent } = require("./_lib/http");
-const { buildPublicTest, clean, getActiveTest, getAttemptForStudent } = require("./_lib/test-data");
+const { buildPublicTest, clean, getActiveTest, getAttemptForStudent, getRewriteRequestForStudent } = require("./_lib/test-data");
 const { buildSummary, finalizeAttempt } = require("./_lib/test-attempts");
+
+function isRewriteRequestRelevant(attempt, rewriteRequest) {
+  const attemptData = attempt && attempt.data ? attempt.data : {};
+  const requestData = rewriteRequest && rewriteRequest.data ? rewriteRequest.data : {};
+  return Number(requestData.requestedAtMs || 0) >= Number(attemptData.startedAtMs || 0);
+}
+
+function getEffectiveRewriteStatus(attempt, rewriteRequest) {
+  const attemptStatus = clean(attempt && attempt.data && attempt.data.rewriteRequestStatus).toLowerCase();
+  if (attemptStatus) {
+    return attemptStatus;
+  }
+  if (!isRewriteRequestRelevant(attempt, rewriteRequest)) {
+    return "";
+  }
+  return clean(rewriteRequest && rewriteRequest.data && rewriteRequest.data.status).toLowerCase();
+}
 
 async function resolveStudentSession(event) {
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
@@ -64,8 +81,9 @@ exports.handler = async function (event) {
     const opensAt = new Date(publicTest.opensAt).getTime();
     const closesAt = new Date(publicTest.closesAt).getTime();
     const existingAttempt = await getAttemptForStudent(db, studentSnapshot.id, activeTestDoc.id);
+    const rewriteRequest = existingAttempt ? await getRewriteRequestForStudent(db, studentSnapshot.id, activeTestDoc.id) : null;
     const rewriteApproved = existingAttempt
-      && clean(existingAttempt.data.rewriteRequestStatus).toLowerCase() === "approved"
+      && getEffectiveRewriteStatus(existingAttempt, rewriteRequest) === "approved"
       && clean(existingAttempt.data.status).toLowerCase() !== "started";
 
     if (rewriteApproved) {
@@ -115,9 +133,9 @@ exports.handler = async function (event) {
         performanceStatusCode: existingAttempt.data.performanceStatusCode || "",
         suggestionCodes: Array.isArray(existingAttempt.data.suggestionCodes) ? existingAttempt.data.suggestionCodes : []
       }, { submittedAt: existingAttempt.data.submittedAt || "" }, publicTest.questions);
-      summary.rewriteRequestStatus = clean(existingAttempt.data.rewriteRequestStatus);
-      summary.rewriteRequestedAt = clean(existingAttempt.data.rewriteRequestedAt);
-      summary.rewriteReviewedAt = clean(existingAttempt.data.rewriteReviewedAt);
+      summary.rewriteRequestStatus = clean(existingAttempt.data.rewriteRequestStatus) || clean(rewriteRequest && rewriteRequest.data && rewriteRequest.data.status);
+      summary.rewriteRequestedAt = clean(existingAttempt.data.rewriteRequestedAt) || clean(rewriteRequest && rewriteRequest.data && rewriteRequest.data.requestedAt);
+      summary.rewriteReviewedAt = clean(existingAttempt.data.rewriteReviewedAt) || clean(rewriteRequest && rewriteRequest.data && rewriteRequest.data.reviewedAt);
       return json(200, {
         ok: true,
         state: "submitted",
@@ -138,9 +156,9 @@ exports.handler = async function (event) {
         const summary = await finalizeAttempt(existingAttempt.ref, existingAttempt.data, activeTestDoc.data, {
           status: "auto_submitted"
         });
-        summary.rewriteRequestStatus = clean(existingAttempt.data.rewriteRequestStatus);
-        summary.rewriteRequestedAt = clean(existingAttempt.data.rewriteRequestedAt);
-        summary.rewriteReviewedAt = clean(existingAttempt.data.rewriteReviewedAt);
+        summary.rewriteRequestStatus = clean(existingAttempt.data.rewriteRequestStatus) || clean(rewriteRequest && rewriteRequest.data && rewriteRequest.data.status);
+        summary.rewriteRequestedAt = clean(existingAttempt.data.rewriteRequestedAt) || clean(rewriteRequest && rewriteRequest.data && rewriteRequest.data.requestedAt);
+        summary.rewriteReviewedAt = clean(existingAttempt.data.rewriteReviewedAt) || clean(rewriteRequest && rewriteRequest.data && rewriteRequest.data.reviewedAt);
         return json(200, {
           ok: true,
           state: "submitted",
