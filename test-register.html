@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=26">
+  <link rel="stylesheet" href="assets/css/style.css?v=28">
   <link rel="icon" type="image/png" href="assets/images/new_logo.png">
 </head>
 <body>
@@ -44,37 +44,72 @@
         </div>
       </div>
 
-      <form id="testRegistrationForm" class="form-card application-grid">
-        <label>
-          <span data-test-i18n="test_registration_name">Student Name</span>
-          <input type="text" name="displayName" required data-test-i18n-placeholder="test_registration_name">
-        </label>
-        <label>
-          <span data-test-i18n="test_label_login_name">Student Name / Login Name</span>
-          <input type="text" name="loginName" required data-test-i18n-placeholder="test_placeholder_login_name">
-        </label>
-        <label>
-          <span data-test-i18n="test_label_password">Password</span>
-          <input type="password" name="password" required minlength="6" data-test-i18n-placeholder="test_placeholder_password">
-        </label>
-        <label>
-          <span data-test-i18n="test_registration_mobile">Mobile Number</span>
-          <input type="tel" name="mobile" required data-test-i18n-placeholder="test_placeholder_mobile" placeholder="Enter mobile number">
-        </label>
-        <label>
-          <span data-test-i18n="test_label_language">Language</span>
-          <select name="language" required>
-            <option value="en" data-test-i18n="test_language_english">English</option>
-            <option value="ta" data-test-i18n="test_language_tamil">Tamil</option>
-          </select>
-        </label>
-        <label>
-          <span data-test-i18n="test_registration_batch">Batch</span>
-          <input type="text" name="batchName" data-test-i18n-placeholder="test_placeholder_batch" placeholder="Morning / Evening">
-        </label>
-        <button type="submit" class="btn btn-primary full-width" data-test-i18n="test_registration_submit">Submit Registration</button>
-        <p id="testRegistrationStatus" class="status-text full-width" role="status"></p>
-      </form>
+      <div class="form-stack">
+        <form id="testRegistrationForm" class="form-card application-grid">
+          <label>
+            <span data-test-i18n="test_registration_name">Student Name</span>
+            <input type="text" name="displayName" required data-test-i18n-placeholder="test_registration_name">
+          </label>
+          <label>
+            <span data-test-i18n="test_label_login_name">Student Name / Login Name</span>
+            <input type="text" name="loginName" required data-test-i18n-placeholder="test_placeholder_login_name">
+          </label>
+          <label>
+            <span data-test-i18n="test_label_password">Password</span>
+            <input type="password" name="password" required minlength="6" data-test-i18n-placeholder="test_placeholder_password">
+          </label>
+          <label>
+            <span data-test-i18n="test_registration_mobile">Mobile Number</span>
+            <input type="tel" name="mobile" required data-test-i18n-placeholder="test_placeholder_mobile" placeholder="Enter mobile number">
+          </label>
+          <label>
+            <span data-test-i18n="test_label_language">Language</span>
+            <select name="language" required>
+              <option value="en" data-test-i18n="test_language_english">English</option>
+              <option value="ta" data-test-i18n="test_language_tamil">Tamil</option>
+            </select>
+          </label>
+          <label>
+            <span data-test-i18n="test_registration_batch">Batch</span>
+            <input type="text" name="batchName" data-test-i18n-placeholder="test_placeholder_batch" placeholder="Morning / Evening">
+          </label>
+          <button type="submit" class="btn btn-primary full-width" data-test-i18n="test_registration_submit">Submit Registration</button>
+          <p id="testRegistrationStatus" class="status-text full-width" role="status"></p>
+        </form>
+
+        <section class="form-card status-check-card">
+          <div>
+            <h2 data-test-i18n="test_registration_status_title">Registration Status</h2>
+            <p class="form-note" data-test-i18n="test_registration_status_hint">Use the same login name and mobile number to check whether your registration is pending, approved, or inactive.</p>
+          </div>
+          <form id="testRegistrationStatusForm" class="application-grid section-end">
+            <label>
+              <span data-test-i18n="test_label_login_name">Student Name / Login Name</span>
+              <input type="text" name="loginName" required data-test-i18n-placeholder="test_placeholder_login_name" placeholder="Enter login name">
+            </label>
+            <label>
+              <span data-test-i18n="test_registration_mobile">Mobile Number</span>
+              <input type="tel" name="mobile" required data-test-i18n-placeholder="test_placeholder_mobile" placeholder="Enter mobile number">
+            </label>
+            <button type="submit" class="btn btn-outline full-width" data-test-i18n="test_registration_status_check">Check Status</button>
+            <p id="testRegistrationLookupStatus" class="status-text full-width" role="status"></p>
+          </form>
+          <div id="testRegistrationStatusResult" class="result-status-card hidden">
+            <span class="mini-label" data-test-i18n="test_registration_status_current">Current Status</span>
+            <p><span id="registrationStatusPill" class="status-pill status-pill-pending">Pending</span></p>
+            <p id="registrationStatusNote" class="form-note">-</p>
+            <div class="summary-grid portal-summary-grid">
+              <div class="summary-chip"><span data-test-i18n="test_registration_name">Student Name</span><strong id="registrationStatusName">-</strong></div>
+              <div class="summary-chip"><span data-test-i18n="test_label_login_name">Student Name / Login Name</span><strong id="registrationStatusLogin">-</strong></div>
+              <div class="summary-chip"><span data-test-i18n="test_registration_batch">Batch</span><strong id="registrationStatusBatch">-</strong></div>
+              <div class="summary-chip"><span data-test-i18n="test_label_language">Language</span><strong id="registrationStatusLanguage">-</strong></div>
+            </div>
+            <div class="hero-actions registration-status-cta">
+              <a id="registrationStatusLoginLink" href="test.html" class="btn btn-primary hidden" data-test-i18n="test_registration_status_login_cta">Go To Student Test Login</a>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
 
@@ -86,9 +121,9 @@
 
   <script src="assets/js/firebase-config.js?v=25"></script>
   <script src="assets/js/i18n.js?v=23"></script>
-  <script src="assets/js/test-shared.js?v=35"></script>
-  <script src="assets/js/test-api.js?v=37"></script>
-  <script src="assets/js/test-register.js?v=25"></script>
+  <script src="assets/js/test-shared.js?v=37"></script>
+  <script src="assets/js/test-api.js?v=40"></script>
+  <script src="assets/js/test-register.js?v=26"></script>
 </body>
 </html>
 

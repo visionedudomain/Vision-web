@@ -53,6 +53,30 @@ async function getRegistrationByLoginName(db, loginNameNormalized) {
   };
 }
 
+async function getStudentByMobile(db, mobile) {
+  const snapshot = await db.collection(STUDENTS_COLLECTION).where("mobile", "==", clean(mobile)).limit(1).get();
+  if (snapshot.empty) {
+    return null;
+  }
+  const doc = snapshot.docs[0];
+  return {
+    id: doc.id,
+    data: doc.data() || {}
+  };
+}
+
+async function getRegistrationByMobile(db, mobile) {
+  const snapshot = await db.collection(REGISTRATIONS_COLLECTION).where("mobile", "==", clean(mobile)).limit(1).get();
+  if (snapshot.empty) {
+    return null;
+  }
+  const doc = snapshot.docs[0];
+  return {
+    id: doc.id,
+    data: doc.data() || {}
+  };
+}
+
 async function getActiveTest(db) {
   const snapshot = await db.collection(TESTS_COLLECTION).where("isActive", "==", true).limit(1).get();
   if (snapshot.empty) {
@@ -138,7 +162,9 @@ module.exports = {
   normalizeLanguage,
   buildPublicTest,
   getStudentByLoginName,
+  getStudentByMobile,
   getRegistrationByLoginName,
+  getRegistrationByMobile,
   getActiveTest,
   getAttemptDocumentId,
   getAttemptForStudent,

@@ -29,6 +29,15 @@
     });
   }
 
+  function formatScore(score, totalQuestions, showDecimal) {
+    var safeScore = Number(score || 0);
+    var safeTotal = Number(totalQuestions || 0);
+    var displayScore = showDecimal
+      ? (Math.round(safeScore * 10) / 10).toFixed(1).replace(/\.0$/, "")
+      : String(Math.round(safeScore * 10) / 10).replace(/\.0$/, "");
+    return safeTotal > 0 ? displayScore + " / " + safeTotal : displayScore;
+  }
+
   function setStatus(id, message, isError) {
     var element = byId(id);
     if (!element) {
@@ -159,8 +168,10 @@
     var feeStatusSelect = byId("feeStatusSelect");
     var clearFeeFormButton = byId("clearFeeForm");
     var rewriteBody = byId("testRewriteRequestsBody");
+    var resultsSummaryGrid = byId("testResultsSummaryGrid");
 
     var students = [];
+    var attempts = [];
 
     function getSelectedStudent() {
       var studentId = clean(feeStudentSelect && feeStudentSelect.value);
@@ -293,6 +304,79 @@
       });
     }
 
+    function renderResultsSummary() {
+      if (!resultsSummaryGrid) {
+        return;
+      }
+
+      var submittedAttempts = attempts.filter(function (attempt) {
+        var status = clean(attempt && attempt.status).toLowerCase();
+        return status === "submitted" || status === "auto_submitted";
+      });
+
+      resultsSummaryGrid.innerHTML = "";
+      if (!submittedAttempts.length) {
+        resultsSummaryGrid.innerHTML = "<p class='empty-text'>" + escapeHtml(t("test_results_summary_empty", "No submitted attempts yet.")) + "</p>";
+        return;
+      }
+
+      var grouped = {};
+      submittedAttempts.forEach(function (attempt) {
+        var key = clean(attempt.testId) || clean(attempt.testTitle) || "unknown-test";
+        var totalQuestions = Number(attempt.totalQuestions || 0);
+        var score = Number(attempt.score || 0);
+        if (!grouped[key]) {
+          grouped[key] = {
+            testTitle: clean(attempt.testTitle) || "-",
+            language: clean(attempt.language),
+            totalQuestions: totalQuestions,
+            submittedCount: 0,
+            scoreTotal: 0,
+            highestScore: null,
+            lowestScore: null,
+            latestSubmittedMs: 0
+          };
+        }
+
+        grouped[key].submittedCount += 1;
+        grouped[key].scoreTotal += score;
+        grouped[key].highestScore = grouped[key].highestScore === null ? score : Math.max(grouped[key].highestScore, score);
+        grouped[key].lowestScore = grouped[key].lowestScore === null ? score : Math.min(grouped[key].lowestScore, score);
+        grouped[key].latestSubmittedMs = Math.max(grouped[key].latestSubmittedMs, Number(new Date(attempt.submittedAt || 0).getTime() || 0));
+        if (!grouped[key].totalQuestions && totalQuestions > 0) {
+          grouped[key].totalQuestions = totalQuestions;
+        }
+      });
+
+      Object.keys(grouped).map(function (key) {
+        return grouped[key];
+      }).sort(function (left, right) {
+        return Number(right.latestSubmittedMs || 0) - Number(left.latestSubmittedMs || 0);
+      }).forEach(function (summary) {
+        var card = document.createElement("article");
+        var averageScore = summary.submittedCount ? summary.scoreTotal / summary.submittedCount : 0;
+        var languageLabel = clean(summary.language) === "ta"
+          ? t("test_language_tamil", "Tamil")
+          : t("test_language_english", "English");
+        card.className = "result-test-summary-card";
+        card.innerHTML = "" +
+          "<div class='row-between'>" +
+            "<div>" +
+              "<p class='mini-label'>" + escapeHtml(languageLabel) + "</p>" +
+              "<h3>" + escapeHtml(summary.testTitle) + "</h3>" +
+            "</div>" +
+            "<span class='status-pill status-pill-submitted'>" + escapeHtml(String(summary.submittedCount)) + " " + escapeHtml(t("test_results_summary_submitted", "Submitted")) + "</span>" +
+          "</div>" +
+          "<div class='summary-grid result-test-summary-stats'>" +
+            "<div class='summary-chip'><span>" + escapeHtml(t("test_results_summary_average", "Average Score")) + "</span><strong>" + escapeHtml(formatScore(averageScore, summary.totalQuestions, true)) + "</strong></div>" +
+            "<div class='summary-chip'><span>" + escapeHtml(t("test_results_summary_highest", "Highest Score")) + "</span><strong>" + escapeHtml(formatScore(summary.highestScore, summary.totalQuestions, false)) + "</strong></div>" +
+            "<div class='summary-chip'><span>" + escapeHtml(t("test_results_summary_lowest", "Lowest Score")) + "</span><strong>" + escapeHtml(formatScore(summary.lowestScore, summary.totalQuestions, false)) + "</strong></div>" +
+            "<div class='summary-chip'><span>" + escapeHtml(t("test_portal_question_count", "Questions")) + "</span><strong>" + escapeHtml(String(summary.totalQuestions || 0)) + "</strong></div>" +
+          "</div>";
+        resultsSummaryGrid.appendChild(card);
+      });
+    }
+
     async function refreshRewriteRequests() {
       if (!rewriteBody) {
         return;
@@ -333,7 +417,9 @@
       syncFeePreview();
     });
 
-    window.VisionTestStore.subscribeAttempts(function () {
+    window.VisionTestStore.subscribeAttempts(function (items) {
+      attempts = Array.isArray(items) ? items.slice() : [];
+      renderResultsSummary();
       refreshRewriteRequests();
     });
 
@@ -421,6 +507,7 @@
     window.addEventListener("vision-language-changed", function () {
       renderFeeSummary();
       renderFeesTable();
+      renderResultsSummary();
       refreshRewriteRequests();
       syncFeePreview();
     });
@@ -431,6 +518,7 @@
       feeForm.elements.paidAmount.value = "0";
     }
     syncFeePreview();
+    renderResultsSummary();
     refreshRewriteRequests();
   });
 })();

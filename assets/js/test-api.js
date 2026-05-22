@@ -154,6 +154,30 @@
     return payload;
   }
 
+  async function callPublicFunction(functionName, options) {
+    var safeOptions = options && typeof options === "object" ? options : {};
+    var method = clean(safeOptions.method || "POST").toUpperCase();
+    var response = await fetch(buildBackendUrl(functionName), {
+      method: method,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: method === "GET" ? undefined : JSON.stringify(safeOptions.body || {})
+    });
+    var payload = {};
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = {};
+    }
+    if (!response.ok) {
+      var backendError = createErrorFromPayload(payload, safeOptions.fallbackMessage || "Request failed.");
+      backendError.status = response.status;
+      throw backendError;
+    }
+    return payload;
+  }
+
   function shouldFallbackToDirectRewrite(error) {
     var status = Number(error && error.status || 0);
     if (status === 404 || status === 405 || status >= 500) {
@@ -163,6 +187,14 @@
   }
 
   function shouldFallbackToDirectAdminRewrite(error) {
+    var status = Number(error && error.status || 0);
+    if (status === 404 || status === 405 || status >= 500) {
+      return true;
+    }
+    return isNetworkError(error);
+  }
+
+  function shouldFallbackToPublicBackend(error) {
     var status = Number(error && error.status || 0);
     if (status === 404 || status === 405 || status >= 500) {
       return true;
@@ -895,6 +927,71 @@
     }
   }
 
+  async function checkRegistrationAvailability(payload) {
+    var safe = payload && typeof payload === "object" ? payload : {};
+    var loginName = clean(safe.loginName);
+    var mobile = clean(safe.mobile);
+
+    if (!loginName && !mobile) {
+      return {
+        ok: true,
+        isAvailable: true,
+        loginNameAvailable: true,
+        mobileAvailable: true
+      };
+    }
+
+    try {
+      return await callPublicFunction("test-registration-status", {
+        method: "POST",
+        body: {
+          action: "validate",
+          loginName: loginName,
+          mobile: mobile
+        },
+        fallbackMessage: "Unable to validate registration details right now."
+      });
+    } catch (error) {
+      if (shouldFallbackToPublicBackend(error)) {
+        return {
+          ok: true,
+          isAvailable: true,
+          loginNameAvailable: true,
+          mobileAvailable: true,
+          skipped: true
+        };
+      }
+      throw error;
+    }
+  }
+
+  async function getRegistrationStatus(payload) {
+    var safe = payload && typeof payload === "object" ? payload : {};
+    var loginName = clean(safe.loginName);
+    var mobile = clean(safe.mobile);
+
+    if (!loginName && !mobile) {
+      throw createError("Login name or mobile number is required.", "REGISTRATION_STATUS_INVALID");
+    }
+
+    try {
+      return await callPublicFunction("test-registration-status", {
+        method: "POST",
+        body: {
+          action: "lookup",
+          loginName: loginName,
+          mobile: mobile
+        },
+        fallbackMessage: "Unable to check registration status right now."
+      });
+    } catch (error) {
+      if (shouldFallbackToPublicBackend(error)) {
+        throw createError("Registration status is unavailable right now. Please try again in a moment.", "REGISTRATION_STATUS_UNAVAILABLE", error);
+      }
+      throw error;
+    }
+  }
+
   async function registerStudent(payload) {
     await ensureStudentFirebase();
     
@@ -917,6 +1014,14 @@
     }
     if (password.length < 6) {
       throw createError("Password must be at least 6 characters.", "REGISTRATION_PASSWORD_SHORT");
+    }
+
+    var availability = await checkRegistrationAvailability({
+      loginName: loginName,
+      mobile: mobile
+    });
+    if (availability && availability.isAvailable === false) {
+      throw createError(clean(availability.message) || "This registration already exists.", "REGISTRATION_DUPLICATE");
     }
 
     var provisionedAccount = await provisionStudentAuthAccount(loginNameNormalized, password);
@@ -1443,6 +1548,8 @@
         throw error;
       }
     },
+    checkRegistrationAvailability: checkRegistrationAvailability,
+    getRegistrationStatus: getRegistrationStatus,
     getRewriteRequests: async function () {
       var store = await requireAdminStore();
       return store.getRewriteRequests();

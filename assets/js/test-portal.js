@@ -13,6 +13,12 @@
     return String(value || "").trim();
   }
 
+  function replaceTokens(template, values) {
+    return String(template || "").replace(/\{(\w+)\}/g, function (_, key) {
+      return Object.prototype.hasOwnProperty.call(values || {}, key) ? values[key] : "";
+    });
+  }
+
   function formatDateTime(value) {
     if (!value) {
       return "-";
@@ -29,6 +35,21 @@
       hour: "2-digit",
       minute: "2-digit"
     });
+  }
+
+  function formatCountdown(targetTime) {
+    var targetMillis = new Date(targetTime).getTime();
+    if (!Number.isFinite(targetMillis)) {
+      return "-";
+    }
+    var diff = Math.max(targetMillis - Date.now(), 0);
+    var totalSeconds = Math.floor(diff / 1000);
+    var days = Math.floor(totalSeconds / 86400);
+    var hours = Math.floor((totalSeconds % 86400) / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    var seconds = totalSeconds % 60;
+    var clock = String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    return days > 0 ? String(days) + "d " + clock : clock;
   }
 
   function setStatus(message, isError) {
@@ -259,6 +280,7 @@
   var portalState = {
     activePayload: null,
     timerId: null,
+    statusTimerId: null,
     testData: null,
     attemptData: null,
     resultSummary: null,
@@ -269,6 +291,73 @@
     if (portalState.timerId) {
       window.clearInterval(portalState.timerId);
       portalState.timerId = null;
+    }
+  }
+
+  function clearStatusTimer() {
+    if (portalState.statusTimerId) {
+      window.clearInterval(portalState.statusTimerId);
+      portalState.statusTimerId = null;
+    }
+  }
+
+  function getAvailabilityLabel(state) {
+    var map = {
+      no_test: "test_portal_availability_none",
+      before_window: "test_portal_availability_not_open",
+      window_closed: "test_portal_availability_closed",
+      ready: "test_portal_availability_live",
+      in_progress: "test_portal_availability_in_progress",
+      submitted: "test_portal_availability_submitted"
+    };
+    return t(map[state] || "test_portal_availability_none", "No Test");
+  }
+
+  function updatePortalStateDetails() {
+    var payload = portalState.activePayload || {};
+    var state = clean(payload.state || "no_test");
+    var test = payload.test || portalState.testData || null;
+    var attempt = payload.attempt || portalState.attemptData || null;
+    var message = getPortalStateMessage(state);
+    var countdown = "-";
+
+    if (state === "before_window" && test) {
+      message = replaceTokens(t("test_portal_not_open_detail", "This test opens on {time}."), {
+        time: formatDateTime(test.opensAt)
+      });
+      countdown = test.opensAt ? formatCountdown(test.opensAt) : "-";
+    } else if (state === "ready" && test) {
+      message = replaceTokens(t("test_portal_ready_detail", "The test is live now and closes on {time}."), {
+        time: formatDateTime(test.closesAt)
+      });
+      countdown = test.closesAt ? formatCountdown(test.closesAt) : "-";
+    } else if (state === "window_closed" && test) {
+      message = replaceTokens(t("test_portal_window_closed_detail", "This test closed on {time}."), {
+        time: formatDateTime(test.closesAt)
+      });
+      countdown = t("test_portal_countdown_closed", "Closed");
+    } else if (state === "in_progress" && attempt) {
+      message = replaceTokens(t("test_portal_progress_detail", "Your attempt is active until {time}."), {
+        time: formatDateTime(attempt.expiresAt)
+      });
+      countdown = attempt.expiresAt ? formatCountdown(attempt.expiresAt) : "-";
+    } else if (state === "submitted") {
+      countdown = t("test_portal_countdown_complete", "Completed");
+    }
+
+    setText("testCardAvailability", getAvailabilityLabel(state));
+    setText("testCardCountdown", countdown);
+    setText("testCardMessage", message);
+  }
+
+  function syncStatusTimer() {
+    clearStatusTimer();
+    updatePortalStateDetails();
+
+    var payload = portalState.activePayload || {};
+    var state = clean(payload.state || "");
+    if (state === "before_window" || state === "ready" || state === "in_progress") {
+      portalState.statusTimerId = window.setInterval(updatePortalStateDetails, 1000);
     }
   }
 
@@ -350,7 +439,7 @@
     setText("testCardLanguage", payload.test ? (payload.test.language === "ta" ? t("test_language_tamil") : t("test_language_english")) : "-");
     setText("testCardDuration", payload.test ? formatMinutes(payload.test.durationMinutes || 0) : "-");
     setText("testCardQuestions", payload.test ? String(payload.test.questionCount || 0) : "0");
-    setText("testCardMessage", getPortalStateMessage(payload.state));
+    syncStatusTimer();
 
     var startButton = byId("startTestButton");
     var resumeButton = byId("resumeTestButton");
@@ -367,9 +456,15 @@
     if (!list) {
       return;
     }
+    portalState.activePayload = Object.assign({}, portalState.activePayload || {}, {
+      state: "in_progress",
+      test: testData,
+      attempt: attemptData
+    });
     portalState.testData = testData;
     portalState.attemptData = attemptData;
     portalState.resultSummary = null;
+    syncStatusTimer();
 
     setSectionVisible("testRunnerSection", true);
     setSectionVisible("testResultSection", false);
@@ -412,7 +507,15 @@
   function renderResult(summary) {
     console.log("🎬 renderResult called with:", summary);
     clearTimer();
+    clearStatusTimer();
+    portalState.activePayload = Object.assign({}, portalState.activePayload || {}, {
+      state: "submitted",
+      attempt: null,
+      summary: summary
+    });
     portalState.resultSummary = summary || null;
+    portalState.attemptData = null;
+    renderTestCard(portalState.activePayload);
     setSectionVisible("testRunnerSection", false);
     setSectionVisible("testResultSection", true);
     setText("resultScoreValue", String(summary.score || 0) + " / " + String(summary.totalQuestions || 0));
@@ -454,6 +557,13 @@
   async function refreshPortal() {
     var payload = await window.VisionTestApi.getActiveTest();
     portalState.activePayload = payload;
+    portalState.testData = payload.test || null;
+    if (payload.state !== "in_progress") {
+      portalState.attemptData = null;
+    }
+    if (payload.state !== "submitted") {
+      portalState.resultSummary = null;
+    }
     renderTestCard(payload);
 
     if (payload.state === "in_progress" && payload.test && payload.attempt) {
@@ -470,6 +580,7 @@
       return;
     }
 
+    clearTimer();
     setSectionVisible("testRunnerSection", false);
     setSectionVisible("testResultSection", false);
     setStatus(getPortalStateMessage(payload.state), false);
@@ -555,6 +666,7 @@
     if (logoutButton) {
       logoutButton.addEventListener("click", function () {
         clearTimer();
+        clearStatusTimer();
         portalState.activePayload = null;
         portalState.testData = null;
         portalState.attemptData = null;
@@ -570,6 +682,12 @@
     async function startOrResume() {
       try {
         var response = await window.VisionTestApi.startAttempt();
+        portalState.activePayload = Object.assign({}, portalState.activePayload || {}, {
+          state: "in_progress",
+          test: response.test,
+          attempt: response.attempt
+        });
+        renderTestCard(portalState.activePayload);
         renderRunner(response.test, response.attempt);
         setStatus(t("test_portal_progress"), false);
       } catch (error) {

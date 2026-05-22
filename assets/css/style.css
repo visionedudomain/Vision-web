@@ -599,6 +599,12 @@ a {
   align-items: start;
 }
 
+.form-stack {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
 .simple-list {
   margin: 1rem 0 0;
   padding-left: 1.1rem;
@@ -1016,6 +1022,33 @@ textarea:focus {
 
 .portal-summary-grid {
   margin-top: 1rem;
+}
+
+.status-check-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.result-test-summary-grid {
+  display: grid;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.result-test-summary-card {
+  padding: 1rem 1.05rem;
+  border-radius: 14px;
+  border: 1px solid rgba(194, 193, 159, 0.4);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 24px rgba(13, 23, 59, 0.05);
+}
+
+.result-test-summary-card h3 {
+  margin-bottom: 0;
+}
+
+.result-test-summary-stats {
+  margin-top: 0.9rem;
 }
 
 .portal-action-stack {
