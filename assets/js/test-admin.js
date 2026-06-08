@@ -13,6 +13,13 @@
     return String(value || "").trim();
   }
 
+  function cleanQuestionText(value) {
+    var text = clean(value);
+    return window.VisionTestText && typeof window.VisionTestText.normalizeTamilText === "function"
+      ? window.VisionTestText.normalizeTamilText(text)
+      : text;
+  }
+
   function setStatus(id, message, isError) {
     var element = byId(id);
     if (!element) {
@@ -559,6 +566,19 @@
     });
   }
 
+  function hasCompleteOptionSet(lines) {
+    var seen = {};
+    extractInlineOptions((Array.isArray(lines) ? lines : []).join(" ")).forEach(function (option) {
+      seen[clean(option.id).toLowerCase()] = true;
+    });
+    return seen.a && seen.b && seen.c && seen.d;
+  }
+
+  function isLikelyUnnumberedQuestionLine(line) {
+    var text = clean(line);
+    return text && !isQuestionStartLine(text) && !/^(?:\([A-Da-d1-4]\)|[A-Da-d1-4]\s*[\)\].:-])\s+/i.test(text) && /[?？]\s*$/.test(text);
+  }
+
   function extractAnswerKeyMap(lines) {
     var answerMap = {};
     (Array.isArray(lines) ? lines : []).forEach(function (line) {
@@ -732,6 +752,10 @@
         currentBlock = pendingPreamble.concat([line]);
         pendingPreamble = [];
         lastQuestionNumber = questionNumber;
+      } else if (currentBlock.length && hasCompleteOptionSet(currentBlock) && isLikelyUnnumberedQuestionLine(line)) {
+        blocks.push(currentBlock);
+        lastQuestionNumber += 1;
+        currentBlock = [String(lastQuestionNumber) + ") " + line];
       } else if (/^(?:read the|directions|instructions|note:|passage)\b/i.test(clean(line))) {
         pendingPreamble.push(line);
       } else if (pendingPreamble.length > 0) {
@@ -1234,11 +1258,11 @@
         return {
           id: question.id || ("question_" + String(index + 1)),
           questionNumber: extractQuestionNumberFromQuestion(question, index),
-          prompt: question.prompt,
+          prompt: cleanQuestionText(question.prompt),
           options: (question.options || []).map(function (option) {
             return {
               id: option.id,
-              text: option.text
+              text: cleanQuestionText(option.text)
             };
           }),
           correctOptionId: clean(question.correctOptionId).toLowerCase()
@@ -1486,11 +1510,11 @@
             return {
               id: question.id || ("question_" + String(index + 1)),
               questionNumber: extractQuestionNumberFromQuestion(question, index),
-              prompt: question.prompt,
+              prompt: cleanQuestionText(question.prompt),
               options: Array.isArray(question.options) ? question.options.map(function (option) {
                 return {
                   id: option.id,
-                  text: option.text
+                  text: cleanQuestionText(option.text)
                 };
               }) : [],
               correctOptionId: ""
@@ -1576,11 +1600,11 @@
             questions: builderQuestions.map(function (question, index) {
               return {
                 id: question.id || ("question_" + String(index + 1)),
-                prompt: clean(question.prompt),
+                prompt: cleanQuestionText(question.prompt),
                 options: (question.options || []).map(function (option) {
                   return {
                     id: option.id,
-                    text: clean(option.text)
+                    text: cleanQuestionText(option.text)
                   };
                 }).filter(function (option) {
                   return option.text;

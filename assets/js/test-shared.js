@@ -553,6 +553,23 @@
     return (translations[language] && translations[language][key]) || translations.en[key] || fallback || key;
   }
 
+  function normalizeTamilText(value) {
+    var text = String(value || "").normalize("NFC");
+    var previous = "";
+    var attempts = 0;
+
+    text = text.replace(/\u25CC(?=[\u0BBE-\u0BCD\u0BD7])/g, "");
+    while (text !== previous && attempts < 4) {
+      previous = text;
+      text = text
+        .replace(/(^|[^\u0B80-\u0BFF]|[\u0BBE-\u0BCD\u0BD7])([\u0BC6-\u0BC8])([\u0B95-\u0BB9]\u0BCD[\u0B95-\u0BB9])([\u0BBE\u0BD7]?)/g, "$1$3$2$4")
+        .replace(/(^|[^\u0B80-\u0BFF]|[\u0BBE-\u0BCD\u0BD7])([\u0BC6-\u0BC8])([\u0B95-\u0BB9])([\u0BBE\u0BD7]?)/g, "$1$3$2$4")
+        .normalize("NFC");
+      attempts += 1;
+    }
+    return text;
+  }
+
   function applyTranslations() {
     document.querySelectorAll("[data-test-i18n]").forEach(function (element) {
       var key = element.getAttribute("data-test-i18n");
@@ -572,5 +589,9 @@
     t: t,
     apply: applyTranslations,
     getLanguage: getLanguage
+  };
+
+  window.VisionTestText = {
+    normalizeTamilText: normalizeTamilText
   };
 })();

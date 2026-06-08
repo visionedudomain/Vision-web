@@ -13,6 +13,13 @@
     return String(value || "").trim();
   }
 
+  function cleanQuestionText(value) {
+    var text = clean(value);
+    return window.VisionTestText && typeof window.VisionTestText.normalizeTamilText === "function"
+      ? window.VisionTestText.normalizeTamilText(text)
+      : text;
+  }
+
   function replaceTokens(template, values) {
     return String(template || "").replace(/\{(\w+)\}/g, function (_, key) {
       return Object.prototype.hasOwnProperty.call(values || {}, key) ? values[key] : "";
@@ -513,14 +520,14 @@
       card.innerHTML = "" +
         "<div class='runner-question-head'>" +
           "<span class='question-index'>Q" + String(index + 1) + "</span>" +
-          "<h3>" + question.prompt + "</h3>" +
+          "<h3>" + cleanQuestionText(question.prompt) + "</h3>" +
         "</div>" +
         "<div class='runner-options'>" +
           question.options.map(function (option) {
             return "" +
               "<label class='runner-option'>" +
                 "<input type='radio' name='question-" + question.id + "' data-question-id='" + question.id + "' value='" + option.id + "' " + (selectedValue === option.id ? "checked" : "") + ">" +
-                "<span>" + option.text + "</span>" +
+                "<span>" + cleanQuestionText(option.text) + "</span>" +
               "</label>";
           }).join("") +
         "</div>";

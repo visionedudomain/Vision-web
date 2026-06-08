@@ -44,6 +44,13 @@
     return String(value || "").trim();
   }
 
+  function cleanQuestionText(value) {
+    var text = clean(value);
+    return window.VisionTestText && typeof window.VisionTestText.normalizeTamilText === "function"
+      ? window.VisionTestText.normalizeTamilText(text)
+      : text;
+  }
+
   function normalizeAdminEmail(value) {
     return clean(value).toLowerCase();
   }
@@ -297,12 +304,12 @@
     var correctOptionId = clean(raw.correctOptionId).toLowerCase();
     return {
       id: clean(raw.id) || ("question_" + String(index + 1)),
-      prompt: clean(raw.prompt),
+      prompt: cleanQuestionText(raw.prompt),
       options: (Array.isArray(raw.options) ? raw.options : []).map(function (option, optionIndex) {
         var optionRaw = option && typeof option === "object" ? option : {};
         return {
           id: clean(optionRaw.id) || String.fromCharCode(97 + optionIndex),
-          text: clean(optionRaw.text)
+          text: cleanQuestionText(optionRaw.text)
         };
       }).filter(function (option) {
         return option.text;
@@ -315,12 +322,12 @@
     var safe = question && typeof question === "object" ? question : {};
     return {
       id: clean(safe.id),
-      prompt: clean(safe.prompt),
+      prompt: cleanQuestionText(safe.prompt),
       options: (Array.isArray(safe.options) ? safe.options : []).map(function (option) {
         var optionSafe = option && typeof option === "object" ? option : {};
         return {
           id: clean(optionSafe.id),
-          text: clean(optionSafe.text)
+          text: cleanQuestionText(optionSafe.text)
         };
       }).filter(function (option) {
         return option.id && option.text;

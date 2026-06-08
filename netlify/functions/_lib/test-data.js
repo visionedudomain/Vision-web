@@ -10,6 +10,27 @@ function clean(value) {
   return String(value || "").trim();
 }
 
+function normalizeTamilText(value) {
+  let text = String(value || "").normalize("NFC");
+  let previous = "";
+  let attempts = 0;
+
+  text = text.replace(/\u25CC(?=[\u0BBE-\u0BCD\u0BD7])/g, "");
+  while (text !== previous && attempts < 4) {
+    previous = text;
+    text = text
+      .replace(/(^|[^\u0B80-\u0BFF]|[\u0BBE-\u0BCD\u0BD7])([\u0BC6-\u0BC8])([\u0B95-\u0BB9]\u0BCD[\u0B95-\u0BB9])([\u0BBE\u0BD7]?)/g, "$1$3$2$4")
+      .replace(/(^|[^\u0B80-\u0BFF]|[\u0BBE-\u0BCD\u0BD7])([\u0BC6-\u0BC8])([\u0B95-\u0BB9])([\u0BBE\u0BD7]?)/g, "$1$3$2$4")
+      .normalize("NFC");
+    attempts += 1;
+  }
+  return text;
+}
+
+function cleanQuestionText(value) {
+  return normalizeTamilText(clean(value));
+}
+
 function normalizeLanguage(value) {
   return clean(value).toLowerCase() === "ta" || clean(value).toLowerCase() === "tamil" ? "ta" : "en";
 }
@@ -17,11 +38,11 @@ function normalizeLanguage(value) {
 function toPublicQuestion(question) {
   return {
     id: clean(question.id),
-    prompt: clean(question.prompt),
+    prompt: cleanQuestionText(question.prompt),
     options: (Array.isArray(question.options) ? question.options : []).map(function (option) {
       return {
         id: clean(option.id),
-        text: clean(option.text)
+        text: cleanQuestionText(option.text)
       };
     }).filter(function (option) {
       return option.id && option.text;
@@ -165,6 +186,8 @@ module.exports = {
   ATTEMPTS_COLLECTION,
   REWRITE_REQUESTS_COLLECTION,
   clean,
+  normalizeTamilText,
+  cleanQuestionText,
   normalizeLanguage,
   buildPublicTest,
   getStudentByLoginName,

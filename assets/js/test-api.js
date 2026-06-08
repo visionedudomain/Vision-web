@@ -25,6 +25,43 @@
     return String(value || "").trim();
   }
 
+  function cleanQuestionText(value) {
+    var text = clean(value);
+    return window.VisionTestText && typeof window.VisionTestText.normalizeTamilText === "function"
+      ? window.VisionTestText.normalizeTamilText(text)
+      : text;
+  }
+
+  function normalizeTestText(test) {
+    if (!test || typeof test !== "object") {
+      return test;
+    }
+    var copy = Object.assign({}, test);
+    copy.questions = (Array.isArray(test.questions) ? test.questions : []).map(function (question) {
+      var safeQuestion = question && typeof question === "object" ? question : {};
+      return Object.assign({}, safeQuestion, {
+        prompt: cleanQuestionText(safeQuestion.prompt),
+        options: (Array.isArray(safeQuestion.options) ? safeQuestion.options : []).map(function (option) {
+          var safeOption = option && typeof option === "object" ? option : {};
+          return Object.assign({}, safeOption, {
+            text: cleanQuestionText(safeOption.text)
+          });
+        })
+      });
+    });
+    return copy;
+  }
+
+  function normalizeTestPayload(payload) {
+    if (!payload || typeof payload !== "object") {
+      return payload;
+    }
+    if (payload.test) {
+      payload.test = normalizeTestText(payload.test);
+    }
+    return payload;
+  }
+
   function normalizeLanguage(value) {
     return clean(value).toLowerCase() === "ta" || clean(value).toLowerCase() === "tamil" ? "ta" : "en";
   }
@@ -369,11 +406,11 @@
       questions: (Array.isArray(data.questions) ? data.questions : []).map(function (question) {
         return {
           id: clean(question && question.id),
-          prompt: clean(question && question.prompt),
+          prompt: cleanQuestionText(question && question.prompt),
           options: (Array.isArray(question && question.options) ? question.options : []).map(function (option) {
             return {
               id: clean(option && option.id),
-              text: clean(option && option.text)
+              text: cleanQuestionText(option && option.text)
             };
           }).filter(function (option) {
             return option.id && option.text;
@@ -1065,7 +1102,7 @@
         backendResponse.summary = decorateSummaryWithRewriteRequest(backendResponse.summary, backendResponse.summary);
       }
       if (backendResponse && backendResponse.ok) {
-        return backendResponse;
+        return normalizeTestPayload(backendResponse);
       }
     } catch (backendError) {
       if (!shouldFallbackToDirectRewrite(backendError)) {
@@ -1237,6 +1274,7 @@
         fallbackMessage: "Unable to start the test right now."
       });
       if (backendResponse && backendResponse.ok) {
+        backendResponse = normalizeTestPayload(backendResponse);
         return {
           ok: true,
           test: backendResponse.test,
