@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=28">
+  <link rel="stylesheet" href="assets/css/style.css?v=29">
   <link rel="icon" type="image/png" href="assets/images/new_logo.png">
 </head>
 <body>
@@ -284,11 +284,21 @@
               </div>
               <form id="testBuilderForm">
                 <input id="testBuilderId" type="hidden" value="">
+                <div class="builder-language-windows" role="group" aria-label="Test medium">
+                  <button type="button" class="builder-language-window is-active" data-test-builder-language="en">
+                    <span data-test-i18n="test_builder_english_window">English Test Builder</span>
+                    <small data-test-i18n="test_builder_english_window_hint">Only English medium students will see this test.</small>
+                  </button>
+                  <button type="button" class="builder-language-window" data-test-builder-language="ta">
+                    <span data-test-i18n="test_builder_tamil_window">Tamil Test Builder</span>
+                    <small data-test-i18n="test_builder_tamil_window_hint">Only Tamil medium students will see this test.</small>
+                  </button>
+                </div>
                 <div class="test-builder-grid">
                   <label><span data-test-i18n="test_label_test_title">Test Title</span>
                     <input type="text" name="title" required>
                   </label>
-                  <label><span data-test-i18n="test_label_language">Language</span>
+                  <label class="builder-language-field"><span data-test-i18n="test_label_language">Language</span>
                     <select name="language" required>
                       <option value="en" data-test-i18n="test_language_english">English</option>
                       <option value="ta" data-test-i18n="test_language_tamil">Tamil</option>
@@ -318,6 +328,7 @@
                     <tr>
                       <th data-test-i18n="test_th_test">Test</th>
                       <th data-test-i18n="test_th_window">Window</th>
+                      <th data-test-i18n="test_th_language">Language</th>
                       <th data-test-i18n="test_th_duration">Duration</th>
                       <th data-test-i18n="test_th_questions">Questions</th>
                       <th data-test-i18n="test_th_status">Status</th>
@@ -463,10 +474,10 @@
   <script src="assets/js/data.js?v=22"></script>
   <script src="assets/js/i18n.js?v=24"></script>
   <script src="assets/js/admin.js?v=25"></script>
-  <script src="assets/js/test-shared.js?v=37"></script>
+  <script src="assets/js/test-shared.js?v=38"></script>
   <script src="assets/js/test-api.js?v=40"></script>
   <script src="assets/js/test-store.js?v=30"></script>
-  <script src="assets/js/test-admin.js?v=29"></script>
+  <script src="assets/js/test-admin.js?v=30"></script>
   <script src="assets/js/admin-test-tools.js?v=5"></script>
 </body>
 </html>

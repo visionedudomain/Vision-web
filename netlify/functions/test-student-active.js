@@ -62,16 +62,19 @@ exports.handler = async function (event) {
       return json(403, { error: "Your test access is not active yet." });
     }
 
-    const activeTestDoc = await getActiveTest(db);
+    const studentLanguage = student.language;
+    const studentPayload = {
+      id: studentSnapshot.id,
+      displayName: student.displayName,
+      loginName: student.loginName,
+      language: studentLanguage
+    };
+    const activeTestDoc = await getActiveTest(db, studentLanguage);
     if (!activeTestDoc) {
       return json(200, {
         ok: true,
         state: "no_test",
-        student: {
-          id: studentSnapshot.id,
-          displayName: student.displayName,
-          loginName: student.loginName
-        },
+        student: studentPayload,
         message: "No active online test is available right now."
       });
     }
@@ -91,7 +94,7 @@ exports.handler = async function (event) {
         return json(200, {
           ok: true,
           state: "before_window",
-          student: { id: studentSnapshot.id, displayName: student.displayName, loginName: student.loginName },
+          student: studentPayload,
           test: publicTest,
           message: "The published test is not open yet."
         });
@@ -101,7 +104,7 @@ exports.handler = async function (event) {
         return json(200, {
           ok: true,
           state: "window_closed",
-          student: { id: studentSnapshot.id, displayName: student.displayName, loginName: student.loginName },
+          student: studentPayload,
           test: publicTest,
           message: "The published test window is closed."
         });
@@ -110,11 +113,7 @@ exports.handler = async function (event) {
       return json(200, {
         ok: true,
         state: "ready",
-        student: {
-          id: studentSnapshot.id,
-          displayName: student.displayName,
-          loginName: student.loginName
-        },
+        student: studentPayload,
         test: publicTest,
         message: "Your retest is ready to start."
       });
@@ -139,11 +138,7 @@ exports.handler = async function (event) {
       return json(200, {
         ok: true,
         state: "submitted",
-        student: {
-          id: studentSnapshot.id,
-          displayName: student.displayName,
-          loginName: student.loginName
-        },
+        student: studentPayload,
         test: publicTest,
         summary,
         message: "Your test has already been submitted."
@@ -162,11 +157,7 @@ exports.handler = async function (event) {
         return json(200, {
           ok: true,
           state: "submitted",
-          student: {
-            id: studentSnapshot.id,
-            displayName: student.displayName,
-            loginName: student.loginName
-          },
+          student: studentPayload,
           test: publicTest,
           summary: summary,
           message: "Your test has already been submitted."
@@ -175,11 +166,7 @@ exports.handler = async function (event) {
       return json(200, {
         ok: true,
         state: "in_progress",
-        student: {
-          id: studentSnapshot.id,
-          displayName: student.displayName,
-          loginName: student.loginName
-        },
+        student: studentPayload,
         test: publicTest,
         attempt: {
           id: existingAttempt.id,
@@ -195,7 +182,7 @@ exports.handler = async function (event) {
       return json(200, {
         ok: true,
         state: "before_window",
-        student: { id: studentSnapshot.id, displayName: student.displayName, loginName: student.loginName },
+        student: studentPayload,
         test: publicTest,
         message: "The published test is not open yet."
       });
@@ -205,7 +192,7 @@ exports.handler = async function (event) {
       return json(200, {
         ok: true,
         state: "window_closed",
-        student: { id: studentSnapshot.id, displayName: student.displayName, loginName: student.loginName },
+        student: studentPayload,
         test: publicTest,
         message: "The published test window is closed."
       });
@@ -214,7 +201,7 @@ exports.handler = async function (event) {
     return json(200, {
       ok: true,
       state: "ready",
-      student: { id: studentSnapshot.id, displayName: student.displayName, loginName: student.loginName },
+      student: studentPayload,
       test: publicTest,
       message: "Your test is ready to start."
     });

@@ -926,6 +926,7 @@
     var builderAnswerSourceName = "";
     var builderMatchedAnswerCount = 0;
     var builderSourceMode = "empty";
+    var activeBuilderLanguage = "en";
 
     function countQuestionsWithAnswers(questionList) {
       return (Array.isArray(questionList) ? questionList : []).filter(function (question) {
@@ -1105,14 +1106,16 @@
       }
       testsBody.innerHTML = "";
       if (!tests.length) {
-        testsBody.innerHTML = "<tr><td colspan='6'>" + t("test_tests_empty") + "</td></tr>";
+        testsBody.innerHTML = "<tr><td colspan='7'>" + t("test_tests_empty") + "</td></tr>";
         return;
       }
       tests.forEach(function (test) {
+        var languageLabel = test.language === "ta" ? t("test_language_tamil") : t("test_language_english");
         var row = document.createElement("tr");
         row.innerHTML = "" +
           "<td>" + (test.title || "-") + "</td>" +
           "<td>" + window.VisionTestStore.formatDateTime(test.opensAt) + "<br>" + window.VisionTestStore.formatDateTime(test.closesAt) + "</td>" +
+          "<td>" + languageLabel + "</td>" +
           "<td>" + (test.durationMinutes || 0) + " min</td>" +
           "<td>" + (test.questionCount || 0) + "</td>" +
           "<td><span class='status-pill status-pill-" + (test.status || "draft") + "'>" + getStatusLabel(test.status || "draft") + "</span></td>" +
@@ -1124,6 +1127,29 @@
           "</div></td>";
         testsBody.appendChild(row);
       });
+    }
+
+    function getLanguageLabel(language) {
+      return clean(language) === "ta" ? t("test_language_tamil") : t("test_language_english");
+    }
+
+    function updateBuilderLanguageWindows() {
+      document.querySelectorAll("[data-test-builder-language]").forEach(function (button) {
+        var language = button.getAttribute("data-test-builder-language");
+        button.classList.toggle("is-active", language === activeBuilderLanguage);
+        button.setAttribute("aria-pressed", language === activeBuilderLanguage ? "true" : "false");
+      });
+      if (testBuilderForm && testBuilderForm.elements.language) {
+        testBuilderForm.elements.language.value = activeBuilderLanguage;
+      }
+    }
+
+    function setBuilderLanguage(language) {
+      activeBuilderLanguage = clean(language) === "ta" ? "ta" : "en";
+      updateBuilderLanguageWindows();
+      setStatus("testBuilderStatus", replaceTokens(t("test_status_builder_language_selected", "{language} test builder selected."), {
+        language: getLanguageLabel(activeBuilderLanguage)
+      }), false);
     }
 
     function renderAttempts() {
@@ -1172,6 +1198,7 @@
     function resetBuilder() {
       if (testBuilderForm) {
         testBuilderForm.reset();
+        testBuilderForm.elements.language.value = activeBuilderLanguage;
       }
       if (byId("testBuilderId")) {
         byId("testBuilderId").value = "";
@@ -1187,6 +1214,7 @@
       builderAnswerSourceName = "";
       builderMatchedAnswerCount = 0;
       builderSourceMode = "empty";
+      updateBuilderLanguageWindows();
       renderBuilderSummary();
     }
 
@@ -1197,7 +1225,8 @@
       }
       byId("testBuilderId").value = test.id;
       testBuilderForm.elements.title.value = test.title || "";
-      testBuilderForm.elements.language.value = test.language || "en";
+      activeBuilderLanguage = clean(test.language) === "ta" ? "ta" : "en";
+      testBuilderForm.elements.language.value = activeBuilderLanguage;
       testBuilderForm.elements.opensAt.value = toLocalDateTimeValue(test.opensAt);
       testBuilderForm.elements.closesAt.value = toLocalDateTimeValue(test.closesAt);
       testBuilderForm.elements.durationMinutes.value = test.durationMinutes || 60;
@@ -1221,8 +1250,17 @@
       builderAnswerSourceName = test.title || "Saved draft";
       builderMatchedAnswerCount = countQuestionsWithAnswers(builderQuestions);
       builderSourceMode = "draft";
+      updateBuilderLanguageWindows();
       renderBuilderSummary();
     }
+
+    updateBuilderLanguageWindows();
+
+    document.querySelectorAll("[data-test-builder-language]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        setBuilderLanguage(button.getAttribute("data-test-builder-language"));
+      });
+    });
 
     window.VisionTestStore.subscribeRegistrations(function (items) {
       registrations = Array.isArray(items) ? items.slice() : [];

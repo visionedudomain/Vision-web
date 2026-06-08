@@ -101,6 +101,35 @@
     setText("studentWelcomeName", safe.displayName || safe.loginName || t("test_portal_student_fallback", "Student"));
   }
 
+  function getLanguageLabel(language) {
+    return clean(language) === "ta" ? t("test_language_tamil", "Tamil") : t("test_language_english", "English");
+  }
+
+  function renderStudentTestWindows(student) {
+    var studentLanguage = clean(student && student.language) === "ta" ? "ta" : "en";
+    var labels = {
+      en: t("test_window_allowed", "Your test window"),
+      ta: t("test_window_locked", "Locked for your medium")
+    };
+    if (studentLanguage === "ta") {
+      labels.en = t("test_window_locked", "Locked for your medium");
+      labels.ta = t("test_window_allowed", "Your test window");
+    }
+
+    [
+      { id: "englishTestWindow", statusId: "englishTestWindowStatus", language: "en" },
+      { id: "tamilTestWindow", statusId: "tamilTestWindowStatus", language: "ta" }
+    ].forEach(function (entry) {
+      var card = byId(entry.id);
+      var isActive = entry.language === studentLanguage;
+      if (card) {
+        card.classList.toggle("is-active", isActive);
+        card.classList.toggle("is-locked", !isActive);
+      }
+      setText(entry.statusId, labels[entry.language] || getLanguageLabel(entry.language));
+    });
+  }
+
   function formatMinutes(value) {
     return String(value || 0) + " " + t("test_unit_minutes", "min");
   }
@@ -434,6 +463,7 @@
 
   function renderTestCard(payload) {
     setStudentWelcome(payload.student);
+    renderStudentTestWindows(payload.student);
     setText("testCardTitle", payload.test ? payload.test.title : "-");
     setText("testCardWindow", payload.test ? (formatDateTime(payload.test.opensAt) + " - " + formatDateTime(payload.test.closesAt)) : "-");
     setText("testCardLanguage", payload.test ? (payload.test.language === "ta" ? t("test_language_tamil") : t("test_language_english")) : "-");
@@ -655,6 +685,7 @@
           var sessionPayload = await window.VisionTestApi.studentLogin(clean(loginForm.elements.loginName.value), clean(loginForm.elements.password.value));
           loginForm.reset();
           setStudentWelcome(sessionPayload && sessionPayload.student);
+          renderStudentTestWindows(sessionPayload && sessionPayload.student);
           setSessionVisible(true);
           await refreshPortal();
         } catch (error) {
@@ -802,6 +833,7 @@
     try {
       var existingSession = await window.VisionTestApi.getStudentSession();
       setStudentWelcome(existingSession && existingSession.student);
+      renderStudentTestWindows(existingSession && existingSession.student);
       setSessionVisible(true);
       try {
         await refreshPortal();

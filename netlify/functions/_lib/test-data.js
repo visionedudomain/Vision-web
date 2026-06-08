@@ -77,12 +77,18 @@ async function getRegistrationByMobile(db, mobile) {
   };
 }
 
-async function getActiveTest(db) {
-  const snapshot = await db.collection(TESTS_COLLECTION).where("isActive", "==", true).limit(1).get();
+async function getActiveTest(db, language) {
+  const targetLanguage = normalizeLanguage(language);
+  const snapshot = await db.collection(TESTS_COLLECTION).where("isActive", "==", true).get();
   if (snapshot.empty) {
     return null;
   }
-  const doc = snapshot.docs[0];
+  const doc = snapshot.docs.find(function (entry) {
+    return normalizeLanguage((entry.data() || {}).language) === targetLanguage;
+  });
+  if (!doc) {
+    return null;
+  }
   const data = doc.data() || {};
   return {
     id: doc.id,

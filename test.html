@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=28">
+  <link rel="stylesheet" href="assets/css/style.css?v=29">
   <link rel="icon" type="image/png" href="assets/images/new_logo.png">
 </head>
 <body>
@@ -56,6 +56,17 @@
             <h2 id="studentWelcomeName">Student</h2>
           </div>
           <button type="button" id="studentLogoutButton" class="btn btn-outline" data-test-i18n="test_btn_logout">Logout</button>
+        </div>
+
+        <div class="portal-language-windows" aria-label="Student test windows">
+          <div id="englishTestWindow" class="portal-language-window" data-medium-window="en">
+            <span data-test-i18n="test_window_english_title">English Test Window</span>
+            <strong id="englishTestWindowStatus">-</strong>
+          </div>
+          <div id="tamilTestWindow" class="portal-language-window" data-medium-window="ta">
+            <span data-test-i18n="test_window_tamil_title">Tamil Test Window</span>
+            <strong id="tamilTestWindowStatus">-</strong>
+          </div>
         </div>
 
         <section class="form-card portal-summary-card">
@@ -145,13 +156,13 @@
 
   <script src="assets/js/firebase-config.js?v=25"></script>
   <script src="assets/js/i18n.js?v=23"></script>
-  <script src="assets/js/test-shared.js?v=37"></script>
+  <script src="assets/js/test-shared.js?v=38"></script>
   <script src="assets/js/suggestion-generator.js?v=1"></script>
   <script src="assets/js/test-suggestion-engine.js?v=1"></script>
   <script src="assets/js/test-api.js?v=40"></script>
   <script src="assets/js/test-store.js?v=30"></script>
   <script src="assets/js/test-demo-api.js?v=1"></script>
-  <script src="assets/js/test-portal.js?v=29"></script>
+  <script src="assets/js/test-portal.js?v=30"></script>
 </body>
 </html>
 

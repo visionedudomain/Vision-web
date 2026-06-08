@@ -33,7 +33,12 @@ exports.handler = async function (event) {
     const body = await readJsonBody(event);
     const db = getDb();
 
-    const activeTestDoc = await getActiveTest(db);
+    const studentSnapshot = await db.collection("students").doc(session.studentId).get();
+    if (!studentSnapshot.exists || clean((studentSnapshot.data() || {}).status) !== "approved") {
+      return json(403, { error: "Your test access is not active yet." });
+    }
+
+    const activeTestDoc = await getActiveTest(db, (studentSnapshot.data() || {}).language);
     if (!activeTestDoc) {
       return json(404, { error: "No active test is available right now." });
     }

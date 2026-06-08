@@ -41,7 +41,8 @@ exports.handler = async function (event) {
       return json(403, { error: "Your test access is not active yet." });
     }
 
-    const activeTestDoc = await getActiveTest(db);
+    const student = studentSnapshot.data() || {};
+    const activeTestDoc = await getActiveTest(db, student.language);
     if (!activeTestDoc) {
       return json(404, { error: "No active test is available right now." });
     }

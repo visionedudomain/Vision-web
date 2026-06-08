@@ -22,6 +22,15 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/attempts/$(request.auth.uid + "__" + testId));
     }
 
+    function studentLanguage() {
+      return get(/databases/$(database)/documents/students/$(request.auth.uid)).data.language;
+    }
+
+    function matchesStudentLanguage(language) {
+      return isApprovedStudent()
+        && language == studentLanguage();
+    }
+
     function ownAttempt(testId) {
       return get(/databases/$(database)/documents/attempts/$(request.auth.uid + "__" + testId));
     }
@@ -197,7 +206,7 @@ service cloud.firestore {
 
     match /published_tests/{testId} {
       allow read: if isAdmin()
-        || (isApprovedStudent() && (resource.data.isActive == true || hasOwnAttempt(testId)));
+        || (isApprovedStudent() && ((resource.data.isActive == true && matchesStudentLanguage(resource.data.language)) || hasOwnAttempt(testId)));
       allow write: if isAdmin();
     }
 
@@ -284,7 +293,8 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/published_tests/$(request.resource.data.testId))
         && request.resource.data.totalQuestions
             == get(/databases/$(database)/documents/published_tests/$(request.resource.data.testId)).data.questionCount
-        && get(/databases/$(database)/documents/published_tests/$(request.resource.data.testId)).data.isActive == true;
+        && get(/databases/$(database)/documents/published_tests/$(request.resource.data.testId)).data.isActive == true
+        && matchesStudentLanguage(get(/databases/$(database)/documents/published_tests/$(request.resource.data.testId)).data.language);
 
       allow update: if isAdmin()
         || isAdminRewriteReviewUpdate()
