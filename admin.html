@@ -382,7 +382,7 @@
               <div class="row-between">
                 <div>
                   <h2 data-test-i18n="test_fees_title">Fees Management</h2>
-                  <p class="form-note" data-test-i18n="test_fees_hint">Track total fees, paid amounts, outstanding balance, and payment notes for each approved test student.</p>
+                  <p class="form-note" data-test-i18n="test_fees_hint">Track monthly fees, paid students, outstanding balances, and payment notes for each approved test student.</p>
                 </div>
               </div>
               <div class="summary-grid portal-summary-grid">
@@ -397,6 +397,9 @@
               <h2 data-test-i18n="test_fees_update_title">Update Student Fee</h2>
               <form id="feeManagementForm">
                 <div class="fee-form-grid">
+                  <label><span data-test-i18n="test_fees_select_month">Choose Month</span>
+                    <input type="month" name="feeMonth" id="feeMonthSelect">
+                  </label>
                   <label><span data-test-i18n="test_fees_select_student">Choose Student</span>
                     <select name="studentId" id="feeStudentSelect"></select>
                   </label>
@@ -432,7 +435,7 @@
 
             <section class="form-card admin-block">
               <h2 data-test-i18n="test_fees_help_title">Fees Page</h2>
-              <p class="form-note" data-test-i18n="test_fees_help_text">Use this page to update collected amounts after offline payment and keep an outstanding balance record for each approved student.</p>
+              <p class="form-note" data-test-i18n="test_fees_help_text">Choose any month to view, update, and edit fee payment records for that month.</p>
             </section>
 
             <section class="form-card admin-block admin-span">
@@ -474,10 +477,10 @@
   <script src="assets/js/data.js?v=22"></script>
   <script src="assets/js/i18n.js?v=24"></script>
   <script src="assets/js/admin.js?v=25"></script>
-  <script src="assets/js/test-shared.js?v=39"></script>
+  <script src="assets/js/test-shared.js?v=40"></script>
   <script src="assets/js/test-api.js?v=41"></script>
-  <script src="assets/js/test-store.js?v=31"></script>
+  <script src="assets/js/test-store.js?v=32"></script>
   <script src="assets/js/test-admin.js?v=31"></script>
-  <script src="assets/js/admin-test-tools.js?v=5"></script>
+  <script src="assets/js/admin-test-tools.js?v=6"></script>
 </body>
 </html>

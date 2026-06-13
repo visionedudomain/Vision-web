@@ -100,6 +100,31 @@
     };
   }
 
+  function getCurrentFeeMonthKey() {
+    return window.VisionTestStore && typeof window.VisionTestStore.getCurrentFeeMonthKey === "function"
+      ? window.VisionTestStore.getCurrentFeeMonthKey()
+      : new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0");
+  }
+
+  function normalizeFeeMonth(value) {
+    return window.VisionTestStore && typeof window.VisionTestStore.normalizeFeeMonth === "function"
+      ? window.VisionTestStore.normalizeFeeMonth(value)
+      : (/^\d{4}-(0[1-9]|1[0-2])$/.test(clean(value)) ? clean(value) : getCurrentFeeMonthKey());
+  }
+
+  function getStudentFeeForMonth(student, monthKey) {
+    var safe = student && typeof student === "object" ? student : {};
+    var feesByMonth = safe.feesByMonth && typeof safe.feesByMonth === "object" ? safe.feesByMonth : {};
+    var normalizedMonth = normalizeFeeMonth(monthKey);
+    if (feesByMonth[normalizedMonth]) {
+      return normalizeFeeRecord(feesByMonth[normalizedMonth]);
+    }
+    if (normalizedMonth === getCurrentFeeMonthKey() && safe.fee) {
+      return normalizeFeeRecord(safe.fee);
+    }
+    return normalizeFeeRecord(null);
+  }
+
   function getRewriteStatusLabel(status) {
     var safeStatus = clean(status).toLowerCase() || "pending";
     if (safeStatus === "approved") {
@@ -164,6 +189,7 @@
     var feeForm = byId("feeManagementForm");
     var feeStudentsTableBody = byId("feesStudentsTableBody");
     var feeStudentSelect = byId("feeStudentSelect");
+    var feeMonthSelect = byId("feeMonthSelect");
     var feeDueAmount = byId("feeDueAmount");
     var feeStatusSelect = byId("feeStatusSelect");
     var clearFeeFormButton = byId("clearFeeForm");
@@ -172,6 +198,10 @@
 
     var students = [];
     var attempts = [];
+
+    function getSelectedFeeMonth() {
+      return normalizeFeeMonth(feeMonthSelect && feeMonthSelect.value);
+    }
 
     function getSelectedStudent() {
       var studentId = clean(feeStudentSelect && feeStudentSelect.value);
@@ -220,8 +250,12 @@
       var student = students.find(function (entry) {
         return entry.id === clean(studentId);
       });
-      var fee = normalizeFeeRecord(student && student.fee);
+      var fee = getStudentFeeForMonth(student, getSelectedFeeMonth());
+      if (feeMonthSelect) {
+        feeMonthSelect.value = getSelectedFeeMonth();
+      }
       feeForm.elements.studentId.value = student ? student.id : "";
+      feeForm.elements.feeMonth.value = getSelectedFeeMonth();
       feeForm.elements.totalAmount.value = String(FIXED_TOTAL_FEE);
       feeForm.elements.status.value = fee.status;
       feeForm.elements.paidAmount.value = String(fee.paidAmount);
@@ -234,7 +268,11 @@
       if (!feeForm) {
         return;
       }
+      var selectedMonth = getSelectedFeeMonth();
       feeForm.reset();
+      if (feeMonthSelect) {
+        feeMonthSelect.value = selectedMonth;
+      }
       feeForm.elements.totalAmount.value = String(FIXED_TOTAL_FEE);
       feeForm.elements.status.value = "unpaid";
       feeForm.elements.paidAmount.value = "0";
@@ -244,7 +282,7 @@
 
     function renderFeeSummary() {
       var summary = students.reduce(function (result, student) {
-        var fee = normalizeFeeRecord(student && student.fee);
+        var fee = getStudentFeeForMonth(student, getSelectedFeeMonth());
         var totalAmount = normalizeAmount(fee.totalAmount);
         var paidAmount = normalizeAmount(fee.paidAmount);
         var dueAmount = Math.max(totalAmount - paidAmount, 0);
@@ -287,7 +325,7 @@
         return;
       }
       students.forEach(function (student) {
-        var fee = normalizeFeeRecord(student && student.fee);
+        var fee = getStudentFeeForMonth(student, getSelectedFeeMonth());
         var status = fee.status;
         var row = document.createElement("tr");
         row.innerHTML = "" +
@@ -459,6 +497,16 @@
       });
     }
 
+    if (feeMonthSelect) {
+      feeMonthSelect.value = getSelectedFeeMonth();
+      feeMonthSelect.addEventListener("change", function () {
+        feeMonthSelect.value = getSelectedFeeMonth();
+        renderFeeSummary();
+        renderFeesTable();
+        applyFeeDetails(feeStudentSelect && feeStudentSelect.value);
+      });
+    }
+
     if (feeForm) {
       feeForm.elements.status.addEventListener("change", syncFeePreview);
 
@@ -473,6 +521,7 @@
           var status = clean(feeForm.elements.status.value).toLowerCase() === "paid" ? "paid" : "unpaid";
           await window.VisionTestStore.saveStudentFee({
             studentId: selectedStudent.id,
+            feeMonth: getSelectedFeeMonth(),
             totalAmount: FIXED_TOTAL_FEE,
             paidAmount: status === "paid" ? FIXED_TOTAL_FEE : 0,
             status: status,
@@ -514,6 +563,7 @@
 
     if (feeForm) {
       feeForm.elements.totalAmount.value = String(FIXED_TOTAL_FEE);
+      feeForm.elements.feeMonth.value = getSelectedFeeMonth();
       feeForm.elements.status.value = "unpaid";
       feeForm.elements.paidAmount.value = "0";
     }

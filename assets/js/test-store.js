@@ -81,6 +81,16 @@
     return "unpaid";
   }
 
+  function getCurrentFeeMonthKey() {
+    var now = new Date();
+    return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+  }
+
+  function normalizeFeeMonth(value) {
+    var text = clean(value);
+    return /^\d{4}-(0[1-9]|1[0-2])$/.test(text) ? text : getCurrentFeeMonthKey();
+  }
+
   function mapStoredFeeDetails(value) {
     var safe = value && typeof value === "object" ? value : {};
     var totalAmount = DEFAULT_STUDENT_FEE;
@@ -97,6 +107,18 @@
       notes: clean(safe.notes),
       updatedAt: safe.updatedAt || ""
     };
+  }
+
+  function mapStoredFeesByMonth(value) {
+    var source = value && typeof value === "object" ? value : {};
+    var result = {};
+    Object.keys(source).forEach(function (monthKey) {
+      var normalizedMonth = normalizeFeeMonth(monthKey);
+      if (normalizedMonth === monthKey) {
+        result[monthKey] = mapStoredFeeDetails(source[monthKey]);
+      }
+    });
+    return result;
   }
 
   function buildFeeDetailsPayload(value) {
@@ -295,7 +317,8 @@
       updatedAt: data.updatedAt || "",
       passwordUpdatedAt: data.passwordUpdatedAt || "",
       approvedAt: data.approvedAt || "",
-      fee: mapStoredFeeDetails(data.fee)
+      fee: mapStoredFeeDetails(data.fee),
+      feesByMonth: mapStoredFeesByMonth(data.feesByMonth)
     };
   }
 
@@ -861,15 +884,19 @@
     if (!studentId) {
       throw new Error("Choose a student first.");
     }
+    var feeMonth = normalizeFeeMonth(safe.feeMonth || safe.monthKey || safe.month);
     var fee = buildFeeDetailsPayload(safe);
     var updatedAt = new Date().toISOString();
+    var feesByMonth = {};
+    feesByMonth[feeMonth] = fee;
     await state.api.setDoc(state.api.doc(state.db, STUDENTS_COLLECTION, studentId), {
-      fee: fee,
+      feesByMonth: feesByMonth,
       updatedAt: updatedAt
     }, { merge: true });
     return {
       ok: true,
       studentId: studentId,
+      feeMonth: feeMonth,
       fee: fee
     };
   }
@@ -1361,6 +1388,8 @@
     bulkApproveStudents: bulkApproveStudents,
     updateStudentStatus: updateStudentStatus,
     saveStudentFee: saveStudentFee,
+    normalizeFeeMonth: normalizeFeeMonth,
+    getCurrentFeeMonthKey: getCurrentFeeMonthKey,
     deleteStudent: deleteStudent,
     resetStudentPassword: resetStudentPassword,
     clearAttempts: clearAttempts,
