@@ -954,6 +954,22 @@ textarea:focus {
   margin-bottom: 1rem;
 }
 
+.fee-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  align-items: end;
+}
+
+.fee-form-grid label,
+.fee-form-grid input,
+.fee-form-grid select {
+  min-width: 0;
+}
+
+.fee-form-grid input,
+.fee-form-grid select {
+  display: block;
+}
+
 .question-builder-list {
   display: grid;
   gap: 0.9rem;
