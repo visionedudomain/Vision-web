@@ -236,8 +236,6 @@
       test_fees_notes_placeholder: "Optional notes about payment follow-up or balance.",
       test_fees_save: "Save Fee Details",
       test_fees_clear: "Clear Form",
-      test_fees_help_title: "Fees Page",
-      test_fees_help_text: "Choose any month to view, update, and edit fee payment records for that month.",
       test_fees_table_title: "Student Fee Records",
       test_fees_empty: "No approved students available for fee tracking yet.",
       test_fees_choose_student: "Choose a student before saving fee details.",
