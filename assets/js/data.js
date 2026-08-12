@@ -23,7 +23,15 @@
     marqueeImages: [
       { id: "marquee_default_001", name: "WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg", src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.05 AM.jpeg" },
       { id: "marquee_default_002", name: "WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg", src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.03 AM.jpeg" },
-      { id: "marquee_default_003", name: "WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg", src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg" }
+      { id: "marquee_default_003", name: "WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg", src: "assets/images/WhatsApp Image 2026-03-05 at 11.35.06 AM.jpeg" },
+      { id: "marquee_default_004", name: "WhatsApp Image 2026-08-11 at 7.42.38 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.38 AM.jpeg" },
+      { id: "marquee_default_005", name: "WhatsApp Image 2026-08-11 at 7.42.39 AM (1).jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.39 AM (1).jpeg" },
+      { id: "marquee_default_006", name: "WhatsApp Image 2026-08-11 at 7.42.39 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.39 AM.jpeg" },
+      { id: "marquee_default_007", name: "WhatsApp Image 2026-08-11 at 7.42.40 AM (1).jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.40 AM (1).jpeg" },
+      { id: "marquee_default_008", name: "WhatsApp Image 2026-08-11 at 7.42.40 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.40 AM.jpeg" },
+      { id: "marquee_default_009", name: "WhatsApp Image 2026-08-11 at 7.42.41 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.41 AM.jpeg" },
+      { id: "marquee_default_010", name: "WhatsApp Image 2026-08-11 at 7.42.42 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.42 AM.jpeg" },
+      { id: "marquee_default_011", name: "WhatsApp Image 2026-08-11 at 7.42.44 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.44 AM.jpeg" }
     ],
     instagramPosts: [
       { id: "ig_default_001", url: "https://www.instagram.com/p/DVfjAxWgcoH/" }

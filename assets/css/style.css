@@ -1211,6 +1211,37 @@ textarea:focus {
   margin: 0.35rem 0 0.15rem;
 }
 
+.marquee-drop-zone {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  padding: 1rem;
+  border: 1.5px dashed rgba(45, 102, 104, 0.38);
+  border-radius: 12px;
+  background: rgba(248, 248, 242, 0.82);
+  color: var(--text-soft);
+  text-align: center;
+}
+
+.marquee-drop-zone.is-dragover,
+.marquee-drop-zone:focus {
+  border-color: var(--primary);
+  outline: 3px solid rgba(222, 99, 138, 0.14);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.marquee-drop-zone input[type="file"] {
+  display: none;
+}
+
+.marquee-drop-zone strong {
+  color: var(--text);
+}
+
+.marquee-drop-zone span {
+  font-size: 0.9rem;
+}
+
 .marquee-upload-item {
   display: flex;
   align-items: center;

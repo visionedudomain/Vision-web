@@ -53,6 +53,52 @@
     });
   }
 
+  function getMarqueeLines(input) {
+    return String(input || "").split(/\r?\n/).map(function (line) {
+      return clean(line);
+    }).filter(Boolean);
+  }
+
+  function getMarqueeAssetPath(file) {
+    var name = clean(file && file.name);
+    return name ? "assets/images/" + name : "";
+  }
+
+  function isImageFile(file) {
+    var type = clean(file && file.type);
+    var name = clean(file && file.name);
+    return /^image\//i.test(type) || /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(name);
+  }
+
+  function appendMarqueeFiles(files) {
+    var marqueeLinks = byId("marqueeImageLinks");
+    if (!marqueeLinks) {
+      return 0;
+    }
+    var existing = getMarqueeLines(marqueeLinks.value);
+    var seen = existing.reduce(function (result, line) {
+      result[line.toLowerCase()] = true;
+      return result;
+    }, {});
+    var added = [];
+    Array.prototype.slice.call(files || []).forEach(function (file) {
+      if (!file || !isImageFile(file)) {
+        return;
+      }
+      var path = getMarqueeAssetPath(file);
+      if (path && !seen[path.toLowerCase()]) {
+        seen[path.toLowerCase()] = true;
+        added.push(path);
+      }
+    });
+    if (!added.length) {
+      return 0;
+    }
+    marqueeLinks.value = existing.concat(added).join("\n");
+    marqueeLinks.dispatchEvent(new Event("input", { bubbles: true }));
+    return added.length;
+  }
+
   function setStatus(id, message, isError) {
     var element = byId(id);
     if (!element) {
@@ -374,6 +420,9 @@
     var instagramForm = byId("instagramPostForm");
     var instagramAdminList = byId("instagramAdminList");
     var marqueeAdminList = byId("marqueeAdminList");
+    var marqueeDropZone = byId("marqueeDropZone");
+    var marqueeFileInput = byId("marqueeFileInput");
+    var marqueeChooseFiles = byId("marqueeChooseFiles");
     var exportButton = byId("exportApplications");
     var clearApplicationsButton = byId("clearApplications");
     var adminWorkspaceTitle = byId("adminWorkspaceTitle");
@@ -564,6 +613,52 @@
           setStatus("contentStatus", t("status_marquee_removed", "Marquee image removed."), false);
         } catch (error) {
           setStatus("contentStatus", error && error.message ? error.message : "Unable to remove marquee image.", true);
+        }
+      });
+    }
+
+    function handleMarqueeFiles(files) {
+      var count = appendMarqueeFiles(files);
+      if (count) {
+        setStatus("contentStatus", t("status_marquee_files_added", "Image paths added. Save website information to publish them."), false);
+      } else {
+        setStatus("contentStatus", t("status_marquee_files_skipped", "No new image files were added."), true);
+      }
+    }
+
+    if (marqueeChooseFiles && marqueeFileInput) {
+      marqueeChooseFiles.addEventListener("click", function () {
+        marqueeFileInput.click();
+      });
+    }
+
+    if (marqueeFileInput) {
+      marqueeFileInput.addEventListener("change", function () {
+        handleMarqueeFiles(marqueeFileInput.files);
+        marqueeFileInput.value = "";
+      });
+    }
+
+    if (marqueeDropZone) {
+      ["dragenter", "dragover"].forEach(function (eventName) {
+        marqueeDropZone.addEventListener(eventName, function (event) {
+          event.preventDefault();
+          marqueeDropZone.classList.add("is-dragover");
+        });
+      });
+      ["dragleave", "drop"].forEach(function (eventName) {
+        marqueeDropZone.addEventListener(eventName, function (event) {
+          event.preventDefault();
+          marqueeDropZone.classList.remove("is-dragover");
+        });
+      });
+      marqueeDropZone.addEventListener("drop", function (event) {
+        handleMarqueeFiles(event.dataTransfer && event.dataTransfer.files);
+      });
+      marqueeDropZone.addEventListener("keydown", function (event) {
+        if ((event.key === "Enter" || event.key === " ") && marqueeFileInput) {
+          event.preventDefault();
+          marqueeFileInput.click();
         }
       });
     }
