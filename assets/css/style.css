@@ -211,7 +211,7 @@ a {
   display: grid;
   grid-template-columns: 1.4fr 0.85fr;
   gap: 1.6rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .hero-media-panel {
@@ -333,7 +333,8 @@ a {
 }
 
 .hero-marquee {
-  height: 360px;
+  height: auto;
+  min-height: 360px;
   position: relative;
   border-radius: var(--radius);
   border: 1px solid var(--panel-border);
