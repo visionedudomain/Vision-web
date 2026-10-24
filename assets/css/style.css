@@ -219,6 +219,14 @@ a {
   gap: 0.95rem;
 }
 
+.hero-announcement {
+  grid-column: 1 / -1;
+}
+
+.hero .hero-announcement p {
+  max-width: none;
+}
+
 .tagline {
   display: inline-block;
   margin: 0 0 0.8rem;
@@ -325,7 +333,7 @@ a {
 }
 
 .hero-marquee {
-  height: 445px;
+  height: 360px;
   position: relative;
   border-radius: var(--radius);
   border: 1px solid var(--panel-border);
