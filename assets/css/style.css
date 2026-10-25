@@ -419,6 +419,11 @@ a {
   overflow: hidden;
 }
 
+/* The gallery lives inside main, so lift main above the sticky header while open. */
+.marquee-gallery-open main {
+  z-index: 31;
+}
+
 .marquee-gallery {
   position: fixed;
   inset: 0;
