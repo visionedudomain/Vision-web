@@ -232,13 +232,11 @@
 
   function updateMarqueeGallery() {
     var image = document.getElementById("marqueeGalleryImage");
-    var caption = document.getElementById("marqueeGalleryCaption");
     var count = document.getElementById("marqueeGalleryCount");
     if (!image || !marqueeImages.length) return;
     var item = marqueeImages[marqueeActiveIndex];
     image.src = item.src;
     image.alt = t("academy_name_brand", "Vision Education Academy") + " " + (item.name || "");
-    if (caption) caption.textContent = item.name || t("academy_name_brand", "Vision Education Academy");
     if (count) count.textContent = (marqueeActiveIndex + 1) + " / " + marqueeImages.length;
   }
 

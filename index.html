@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=37">
+  <link rel="stylesheet" href="assets/css/style.css?v=38">
   <link rel="icon" type="image/png" href="assets/images/favicon-circle.png?v=1">
 </head>
 <body>
@@ -63,16 +63,13 @@
 
     <div id="marqueeGallery" class="marquee-gallery" aria-hidden="true">
       <div class="marquee-gallery-backdrop" data-marquee-gallery-close></div>
-      <section class="marquee-gallery-dialog" role="dialog" aria-modal="true" aria-labelledby="marqueeGalleryCaption" tabindex="-1">
+      <section class="marquee-gallery-dialog" role="dialog" aria-modal="true" aria-label="Marquee image gallery" tabindex="-1">
         <button type="button" id="marqueeGalleryClose" class="marquee-gallery-close" data-marquee-gallery-close data-i18n-aria-label="home_marquee_gallery_close" aria-label="Close image gallery">×</button>
         <button type="button" id="marqueeGalleryPrevious" class="marquee-gallery-arrow marquee-gallery-previous" data-i18n-aria-label="home_marquee_gallery_previous" aria-label="Previous image">‹</button>
         <figure class="marquee-gallery-figure">
           <img id="marqueeGalleryImage" src="" alt="">
-          <figcaption>
-            <span id="marqueeGalleryCaption"></span>
-            <span id="marqueeGalleryCount" class="marquee-gallery-count"></span>
-          </figcaption>
         </figure>
+        <span id="marqueeGalleryCount" class="marquee-gallery-count" aria-live="polite"></span>
         <button type="button" id="marqueeGalleryNext" class="marquee-gallery-arrow marquee-gallery-next" data-i18n-aria-label="home_marquee_gallery_next" aria-label="Next image">›</button>
       </section>
     </div>
@@ -132,7 +129,7 @@
   <script src="assets/js/firebase-config.js?v=25"></script>
   <script src="assets/js/data.js?v=25"></script>
   <script src="assets/js/i18n.js?v=26"></script>
-  <script src="assets/js/main.js?v=23"></script>
+  <script src="assets/js/main.js?v=24"></script>
 </body>
 </html>
 
