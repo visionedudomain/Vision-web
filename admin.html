@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=36">
+  <link rel="stylesheet" href="assets/css/style.css?v=37">
   <link rel="icon" type="image/png" href="assets/images/favicon-circle.png?v=1">
 </head>
 <body>
@@ -101,6 +101,7 @@
                 </label>
                 <p class="form-note" data-i18n="admin_marquee_upload_hint">For local images, add the file to assets/images in VS Code and push it to GitHub first. Then paste its path above and save. Public image URLs also work.</p>
                 <div id="marqueeAdminList" class="marquee-upload-list"></div>
+                <p class="form-note" data-i18n="admin_marquee_order_hint">Drag an image by its handle to reorder it, or use the arrow buttons. The order saves automatically.</p>
                 <button type="submit" class="btn btn-primary" data-i18n="btn_save_site">Save Website Information</button>
                 <p id="contentStatus" class="status-text" role="status"></p>
               </form>
@@ -476,8 +477,8 @@
 
   <script src="assets/js/firebase-config.js?v=25"></script>
   <script src="assets/js/data.js?v=25"></script>
-  <script src="assets/js/i18n.js?v=28"></script>
-  <script src="assets/js/admin.js?v=30"></script>
+  <script src="assets/js/i18n.js?v=29"></script>
+  <script src="assets/js/admin.js?v=31"></script>
   <script src="assets/js/test-shared.js?v=41"></script>
   <script src="assets/js/test-api.js?v=41"></script>
   <script src="assets/js/test-store.js?v=32"></script>

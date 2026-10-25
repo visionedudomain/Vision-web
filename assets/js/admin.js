@@ -179,9 +179,26 @@
       return;
     }
 
-    images.forEach(function (item) {
+    images.forEach(function (item, index) {
       var row = document.createElement("div");
       row.className = "marquee-upload-item";
+      row.setAttribute("data-marquee-row-id", item.id);
+
+      var dragHandle = document.createElement("button");
+      dragHandle.type = "button";
+      dragHandle.className = "marquee-drag-handle";
+      dragHandle.draggable = true;
+      dragHandle.setAttribute("data-marquee-drag-handle", "");
+      dragHandle.setAttribute("aria-label", t("admin_marquee_drag", "Drag to reorder"));
+      dragHandle.title = t("admin_marquee_drag", "Drag to reorder");
+      dragHandle.textContent = "⠿";
+
+      var preview = document.createElement("img");
+      preview.className = "marquee-upload-preview";
+      preview.src = item.src || "";
+      preview.alt = "";
+      preview.loading = "lazy";
+      preview.addEventListener("error", function () { preview.classList.add("hidden"); });
 
       var name = document.createElement("p");
       name.className = "marquee-upload-name";
@@ -200,9 +217,35 @@
       removeButton.textContent = t("btn_delete", "Delete");
       removeButton.setAttribute("data-marquee-id", item.id);
 
+      var actions = document.createElement("div");
+      actions.className = "marquee-upload-actions";
+      var moveUpButton = document.createElement("button");
+      moveUpButton.type = "button";
+      moveUpButton.className = "btn btn-outline marquee-order-button";
+      moveUpButton.textContent = "↑";
+      moveUpButton.setAttribute("data-marquee-move", "up");
+      moveUpButton.setAttribute("data-marquee-id", item.id);
+      moveUpButton.setAttribute("aria-label", t("admin_marquee_move_up", "Move image up"));
+      moveUpButton.title = t("admin_marquee_move_up", "Move image up");
+      moveUpButton.disabled = index === 0;
+      var moveDownButton = document.createElement("button");
+      moveDownButton.type = "button";
+      moveDownButton.className = "btn btn-outline marquee-order-button";
+      moveDownButton.textContent = "↓";
+      moveDownButton.setAttribute("data-marquee-move", "down");
+      moveDownButton.setAttribute("data-marquee-id", item.id);
+      moveDownButton.setAttribute("aria-label", t("admin_marquee_move_down", "Move image down"));
+      moveDownButton.title = t("admin_marquee_move_down", "Move image down");
+      moveDownButton.disabled = index === images.length - 1;
+      actions.appendChild(moveUpButton);
+      actions.appendChild(moveDownButton);
+      actions.appendChild(removeButton);
+
+      row.appendChild(dragHandle);
+      row.appendChild(preview);
       row.appendChild(name);
       row.appendChild(sourceLink);
-      row.appendChild(removeButton);
+      row.appendChild(actions);
       container.appendChild(row);
     });
   }
@@ -604,7 +647,37 @@
     }
 
     if (marqueeAdminList) {
+      var draggedMarqueeId = "";
+
+      async function saveMarqueeOrder(images) {
+        var siteData = VisionStore.getSiteData();
+        siteData.marqueeImages = images;
+        setStatus("contentStatus", t("admin_marquee_saving_order", "Saving marquee order..."), false);
+        try {
+          await VisionStore.saveSiteData(siteData);
+          setStatus("contentStatus", t("admin_marquee_order_saved", "Marquee order saved."), false);
+        } catch (error) {
+          setStatus("contentStatus", error && error.message ? error.message : "Unable to save marquee order.", true);
+        }
+      }
+
+      function moveMarqueeImage(id, offset) {
+        var images = VisionStore.getSiteData().marqueeImages || [];
+        var fromIndex = images.findIndex(function (item) { return String(item.id) === String(id); });
+        var toIndex = fromIndex + offset;
+        if (fromIndex < 0 || toIndex < 0 || toIndex >= images.length) return;
+        var moved = images.splice(fromIndex, 1)[0];
+        images.splice(toIndex, 0, moved);
+        saveMarqueeOrder(images);
+      }
+
       marqueeAdminList.addEventListener("click", async function (event) {
+        var moveButton = event.target instanceof Element ? event.target.closest("button[data-marquee-move]") : null;
+        if (moveButton) {
+          event.preventDefault();
+          moveMarqueeImage(moveButton.getAttribute("data-marquee-id"), moveButton.getAttribute("data-marquee-move") === "up" ? -1 : 1);
+          return;
+        }
         var button = getClosestActionButton(event.target, "data-marquee-id");
         if (!button) {
           return;
@@ -617,6 +690,48 @@
         } catch (error) {
           setStatus("contentStatus", error && error.message ? error.message : "Unable to remove marquee image.", true);
         }
+      });
+
+      marqueeAdminList.addEventListener("dragstart", function (event) {
+        var handle = event.target instanceof Element ? event.target.closest("[data-marquee-drag-handle]") : null;
+        var row = handle && handle.closest("[data-marquee-row-id]");
+        if (!row || !event.dataTransfer) return;
+        draggedMarqueeId = row.getAttribute("data-marquee-row-id");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", draggedMarqueeId);
+        row.classList.add("is-dragging");
+      });
+
+      marqueeAdminList.addEventListener("dragover", function (event) {
+        var row = event.target instanceof Element ? event.target.closest("[data-marquee-row-id]") : null;
+        if (!row || !draggedMarqueeId || row.getAttribute("data-marquee-row-id") === draggedMarqueeId) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+        marqueeAdminList.querySelectorAll(".is-drop-target").forEach(function (item) { item.classList.remove("is-drop-target"); });
+        row.classList.add("is-drop-target");
+      });
+
+      marqueeAdminList.addEventListener("drop", function (event) {
+        var row = event.target instanceof Element ? event.target.closest("[data-marquee-row-id]") : null;
+        var targetId = row && row.getAttribute("data-marquee-row-id");
+        var sourceId = event.dataTransfer && event.dataTransfer.getData("text/plain") || draggedMarqueeId;
+        if (!row || !sourceId || !targetId || sourceId === targetId) return;
+        event.preventDefault();
+        var images = VisionStore.getSiteData().marqueeImages || [];
+        var fromIndex = images.findIndex(function (item) { return String(item.id) === String(sourceId); });
+        var toIndex = images.findIndex(function (item) { return String(item.id) === String(targetId); });
+        if (fromIndex < 0 || toIndex < 0) return;
+        var moved = images.splice(fromIndex, 1)[0];
+        if (fromIndex < toIndex) toIndex -= 1;
+        images.splice(toIndex, 0, moved);
+        saveMarqueeOrder(images);
+      });
+
+      marqueeAdminList.addEventListener("dragend", function () {
+        draggedMarqueeId = "";
+        marqueeAdminList.querySelectorAll(".is-dragging, .is-drop-target").forEach(function (item) {
+          item.classList.remove("is-dragging", "is-drop-target");
+        });
       });
     }
 
