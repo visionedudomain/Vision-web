@@ -627,15 +627,15 @@
         var saveButton = siteContentForm.querySelector('button[type="submit"]');
         if (saveButton) saveButton.disabled = true;
         var siteData = VisionStore.getSiteData();
-        siteData.tagline = clean(siteContentForm.elements.tagline.value);
-        siteData.heroTitle = clean(siteContentForm.elements.heroTitle.value);
-        siteData.heroText = clean(siteContentForm.elements.heroText.value);
-        siteData.announcement = clean(siteContentForm.elements.announcement.value);
-        siteData.address = clean(siteContentForm.elements.address.value);
-        siteData.phone = clean(siteContentForm.elements.phone.value);
-        siteData.email = clean(siteContentForm.elements.email.value);
-        siteData.instagramProfileUrl = clean(siteContentForm.elements.instagramProfileUrl.value);
-        siteData.facebookProfileUrl = clean(siteContentForm.elements.facebookProfileUrl.value);
+        siteData.tagline = clean(siteContentForm.elements.tagline.value) || siteData.tagline;
+        siteData.heroTitle = clean(siteContentForm.elements.heroTitle.value) || siteData.heroTitle;
+        siteData.heroText = clean(siteContentForm.elements.heroText.value) || siteData.heroText;
+        siteData.announcement = clean(siteContentForm.elements.announcement.value) || siteData.announcement;
+        siteData.address = clean(siteContentForm.elements.address.value) || siteData.address;
+        siteData.phone = clean(siteContentForm.elements.phone.value) || siteData.phone;
+        siteData.email = clean(siteContentForm.elements.email.value) || siteData.email;
+        siteData.instagramProfileUrl = clean(siteContentForm.elements.instagramProfileUrl.value) || siteData.instagramProfileUrl;
+        siteData.facebookProfileUrl = clean(siteContentForm.elements.facebookProfileUrl.value) || siteData.facebookProfileUrl;
         var existingMarqueeImages = siteData.marqueeImages || [];
         siteData.marqueeImages = parseMarqueeLinks(siteContentForm.elements.marqueeImageLinks.value).map(function (entry) {
           var existing = existingMarqueeImages.filter(function (item) {
@@ -643,6 +643,14 @@
           })[0];
           return existing || entry;
         });
+        var emailInput = siteContentForm.elements.email;
+        var instagramInput = siteContentForm.elements.instagramProfileUrl;
+        if (emailInput.validity.typeMismatch || instagramInput.validity.typeMismatch) {
+          setStatus("contentStatus", "Please enter a valid email address and Instagram profile URL.", true);
+          siteContentForm.reportValidity();
+          if (saveButton) saveButton.disabled = false;
+          return;
+        }
         try {
           for (var imageIndex = 0; imageIndex < pendingMarqueeFiles.length; imageIndex += 1) {
             var pendingImage = pendingMarqueeFiles[imageIndex];
@@ -684,7 +692,7 @@
     function handleMarqueeFiles(files) {
       var result = appendMarqueeFiles(files);
       if (result.added) {
-        var message = String(result.added) + " image(s) selected. Save website information to upload and publish them.";
+        var message = String(pendingMarqueeFiles.length) + " image(s) queued. Save website information to upload and publish them.";
         if (result.skipped) message += " Some files were skipped; images must be 10 MB or smaller.";
         setStatus("contentStatus", message, false);
       } else {
