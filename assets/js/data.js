@@ -8,7 +8,7 @@
   var NEWS_COLLECTION = "news";
   var APPLICATIONS_COLLECTION = "applications";
   var DEFAULT_SITE_DATA = {
-    profileVersion: 11,
+    profileVersion: 12,
     academyName: "VISION EDUCATION ACADEMY",
     tagline: "Coaching for Entrance Success",
     heroTitle: "Build your future with guided preparation.",
@@ -31,7 +31,9 @@
       { id: "marquee_default_008", name: "WhatsApp Image 2026-08-11 at 7.42.40 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.40 AM.jpeg" },
       { id: "marquee_default_009", name: "WhatsApp Image 2026-08-11 at 7.42.41 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.41 AM.jpeg" },
       { id: "marquee_default_010", name: "WhatsApp Image 2026-08-11 at 7.42.42 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.42 AM.jpeg" },
-      { id: "marquee_default_011", name: "WhatsApp Image 2026-08-11 at 7.42.44 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.44 AM.jpeg" }
+      { id: "marquee_default_011", name: "WhatsApp Image 2026-08-11 at 7.42.44 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.44 AM.jpeg" },
+      { id: "marquee_added_20261016", name: "WhatsApp Image 2026-10-16 at 3.29.56 PM.jpeg", src: "assets/images/WhatsApp Image 2026-10-16 at 3.29.56 PM.jpeg" },
+      { id: "marquee_added_20261023", name: "WhatsApp Image 2026-10-23 at 10.40.56 PM.jpeg", src: "assets/images/WhatsApp Image 2026-10-23 at 10.40.56 PM.jpeg" }
     ],
     instagramPosts: [
       { id: "ig_default_001", url: "https://www.instagram.com/p/DVfjAxWgcoH/" }
@@ -49,7 +51,6 @@
     app: null,
     auth: null,
     db: null,
-      storage: null,
     api: null,
     unsubscribeAuth: null
   };
@@ -121,8 +122,7 @@
     var modules = await Promise.all([
       import(getFirebaseModuleUrl("firebase-app.js")),
       import(getFirebaseModuleUrl("firebase-auth.js")),
-      import(getFirebaseModuleUrl("firebase-firestore.js")),
-      import(getFirebaseModuleUrl("firebase-storage.js"))
+      import(getFirebaseModuleUrl("firebase-firestore.js"))
     ]);
 
     firebaseState.api = {
@@ -145,12 +145,7 @@
       deleteDoc: modules[2].deleteDoc,
       serverTimestamp: modules[2].serverTimestamp,
       onSnapshot: modules[2].onSnapshot,
-      limit: modules[2].limit,
-      getStorage: modules[3].getStorage,
-      ref: modules[3].ref,
-      uploadBytes: modules[3].uploadBytes,
-      getDownloadURL: modules[3].getDownloadURL,
-      deleteObject: modules[3].deleteObject
+      limit: modules[2].limit
     };
 
     return firebaseState.api;
@@ -228,8 +223,7 @@
       return {
         id: clean(item.id) || createId("marquee"),
         name: clean(item.name) || getMarqueeNameFromSource(source, index + 1),
-        src: source,
-        storagePath: clean(item.storagePath)
+        src: source
       };
     }).filter(Boolean);
   }
@@ -254,7 +248,7 @@
     var safe = siteData && typeof siteData === "object" ? siteData : {};
     var defaults = DEFAULT_SITE_DATA;
     return {
-      profileVersion: 11,
+      profileVersion: safe.profileVersion == null ? 0 : (Number(safe.profileVersion) || 0),
       academyName: clean(safe.academyName) || defaults.academyName,
       tagline: clean(safe.tagline) || defaults.tagline,
       heroTitle: clean(safe.heroTitle) || defaults.heroTitle,
@@ -457,7 +451,7 @@
       facebookProfileUrl: safe.facebookProfileUrl,
       mapUrl: safe.mapUrl,
       marqueeImages: safe.marqueeImages.map(function (item) {
-        return { id: item.id, name: item.name, src: item.src, storagePath: item.storagePath || "" };
+        return { id: item.id, name: item.name, src: item.src };
       }),
       instagramPosts: safe.instagramPosts.map(function (item) {
         return { id: item.id, url: item.url };
@@ -571,7 +565,6 @@
       firebaseState.app = firebaseState.api.getApps().length ? firebaseState.api.getApp() : firebaseState.api.initializeApp(config);
       firebaseState.auth = firebaseState.api.getAuth(firebaseState.app);
       firebaseState.db = firebaseState.api.getFirestore(firebaseState.app);
-      firebaseState.storage = firebaseState.api.getStorage(firebaseState.app);
       firebaseState.configured = true;
       resolveAuthReady();
 
@@ -637,55 +630,14 @@
     return getSiteData();
   }
 
-  async function uploadMarqueeImage(file) {
-    assertFirebaseConfigured();
-    assertAdminSession();
-    if (!file) {
-      throw new Error("Choose a valid image file.");
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      throw new Error("Each marquee image must be 10 MB or smaller.");
-    }
-    var contentType = clean(file.type).toLowerCase();
-    if (!/^image\//i.test(contentType)) {
-      var extension = clean(file.name).split(".").pop().toLowerCase();
-      var contentTypes = { avif: "image/avif", gif: "image/gif", jpeg: "image/jpeg", jpg: "image/jpeg", png: "image/png", svg: "image/svg+xml", webp: "image/webp" };
-      contentType = contentTypes[extension] || "";
-    }
-    if (!contentType) {
-      throw new Error("Choose a supported image file.");
-    }
-    var safeName = clean(file.name).replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "marquee-image";
-    var storagePath = "marquee/" + currentUser.uid + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "-" + safeName;
-    var storageRef = firebaseState.api.ref(firebaseState.storage, storagePath);
-    var uploaded = await firebaseState.api.uploadBytes(storageRef, file, { contentType: contentType });
-    return {
-      id: createId("marquee"),
-      name: clean(file.name) || safeName,
-      src: await firebaseState.api.getDownloadURL(uploaded.ref),
-      storagePath: storagePath
-    };
-  }
-
   async function deleteMarqueeImage(id) {
     assertFirebaseConfigured();
     assertAdminSession();
     var nextSiteData = getSiteData();
-    var removed = nextSiteData.marqueeImages.filter(function (item) {
-      return String(item.id) === String(id);
-    })[0];
     nextSiteData.marqueeImages = nextSiteData.marqueeImages.filter(function (item) {
       return String(item.id) !== String(id);
     });
-    var saved = await saveSiteData(nextSiteData);
-    if (removed && removed.storagePath) {
-      try {
-        await firebaseState.api.deleteObject(firebaseState.api.ref(firebaseState.storage, removed.storagePath));
-      } catch (error) {
-        console.warn("Unable to remove the stored marquee image.", error);
-      }
-    }
-    return saved;
+    return saveSiteData(nextSiteData);
   }
 
   async function addInstagramPost(url) {
@@ -775,6 +727,22 @@
       }
       return true;
     }
+    var siteData = getSiteData();
+    if (Number(siteData.profileVersion || 0) < 12) {
+      var knownSources = siteData.marqueeImages.reduce(function (result, item) {
+        result[item.src] = true;
+        return result;
+      }, {});
+      DEFAULT_SITE_DATA.marqueeImages.slice(-2).forEach(function (item) {
+        if (!knownSources[item.src]) {
+          siteData.marqueeImages.push(item);
+          knownSources[item.src] = true;
+        }
+      });
+      siteData.profileVersion = 12;
+      await saveSiteData(siteData);
+      return true;
+    }
     return false;
   }
 
@@ -785,7 +753,6 @@
     getSiteData: getSiteData,
     subscribeSiteData: subscribeSiteData,
     saveSiteData: saveSiteData,
-    uploadMarqueeImage: uploadMarqueeImage,
     deleteMarqueeImage: deleteMarqueeImage,
     addInstagramPost: addInstagramPost,
     deleteInstagramPost: deleteInstagramPost,

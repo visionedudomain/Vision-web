@@ -34,7 +34,6 @@
   }
 
   var ADMIN_VIEW_KEY = "vision_admin_view_v1";
-  var pendingMarqueeFiles = [];
 
   function normalizeAdminView(value) {
     var safe = clean(value).toLowerCase();
@@ -51,64 +50,6 @@
         name: clean(fileName) || ("image-link-" + String(index + 1)),
         src: src
       };
-    });
-  }
-
-  function getMarqueeLines(input) {
-    return String(input || "").split(/\r?\n/).map(function (line) {
-      return clean(line);
-    }).filter(Boolean);
-  }
-
-  function isImageFile(file) {
-    var type = clean(file && file.type);
-    var name = clean(file && file.name);
-    return /^image\//i.test(type) || /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(name);
-  }
-
-  function appendMarqueeFiles(files) {
-    var seen = pendingMarqueeFiles.reduce(function (result, entry) {
-      result[entry.file.name.toLowerCase() + "|" + entry.file.size + "|" + entry.file.lastModified] = true;
-      return result;
-    }, {});
-    var added = 0;
-    var skipped = 0;
-    Array.prototype.slice.call(files || []).forEach(function (file) {
-      if (!file || !isImageFile(file)) {
-        skipped += 1;
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        skipped += 1;
-        return;
-      }
-      var key = file.name.toLowerCase() + "|" + file.size + "|" + file.lastModified;
-      if (seen[key]) return;
-      seen[key] = true;
-      pendingMarqueeFiles.push({ file: file, uploaded: null });
-      added += 1;
-    });
-    renderPendingMarqueeFiles();
-    return { added: added, skipped: skipped };
-  }
-
-  function renderPendingMarqueeFiles() {
-    var container = byId("marqueePendingFiles");
-    if (!container) return;
-    container.innerHTML = "";
-    pendingMarqueeFiles.forEach(function (entry, index) {
-      var row = document.createElement("div");
-      row.className = "marquee-pending-item";
-      var name = document.createElement("span");
-      name.textContent = entry.file.name + (entry.uploaded ? " · Ready to save" : " · Waiting to upload");
-      var remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "btn btn-outline";
-      remove.textContent = t("btn_remove", "Remove");
-      remove.setAttribute("data-pending-marquee-index", String(index));
-      row.appendChild(name);
-      row.appendChild(remove);
-      container.appendChild(row);
     });
   }
 
@@ -448,9 +389,6 @@
     var instagramForm = byId("instagramPostForm");
     var instagramAdminList = byId("instagramAdminList");
     var marqueeAdminList = byId("marqueeAdminList");
-    var marqueeDropZone = byId("marqueeDropZone");
-    var marqueeFileInput = byId("marqueeFileInput");
-    var marqueeChooseFiles = byId("marqueeChooseFiles");
     var exportButton = byId("exportApplications");
     var clearApplicationsButton = byId("clearApplications");
     var adminWorkspaceTitle = byId("adminWorkspaceTitle");
@@ -559,6 +497,10 @@
       if (loggedIn) {
         startDashboardSubscriptions();
         setActiveAdminView(getPreferredAdminView());
+        VisionStore.bootstrapDefaultContent().catch(function (error) {
+          console.error("Unable to apply site content updates.", error);
+          setStatus("contentStatus", error && error.message ? error.message : "Unable to apply site content updates.", true);
+        });
       } else {
         stopDashboardSubscriptions();
         clearLoginForm();
@@ -595,7 +537,6 @@
         try {
           await authReadyPromise;
           await VisionStore.loginAdmin(password);
-          await VisionStore.bootstrapDefaultContent();
           clearLoginForm();
           setStatus("loginStatus", t("status_login_success", "Login successful."), false);
         } catch (error) {
@@ -652,17 +593,7 @@
           return;
         }
         try {
-          for (var imageIndex = 0; imageIndex < pendingMarqueeFiles.length; imageIndex += 1) {
-            var pendingImage = pendingMarqueeFiles[imageIndex];
-            if (!pendingImage.uploaded) {
-              setStatus("contentStatus", "Uploading marquee image " + String(imageIndex + 1) + " of " + String(pendingMarqueeFiles.length) + "...", false);
-              pendingImage.uploaded = await VisionStore.uploadMarqueeImage(pendingImage.file);
-            }
-            siteData.marqueeImages.push(pendingImage.uploaded);
-          }
           await VisionStore.saveSiteData(siteData);
-          pendingMarqueeFiles = [];
-          renderPendingMarqueeFiles();
           setStatus("contentStatus", t("status_content_saved", "Website information updated successfully."), false);
         } catch (error) {
           setStatus("contentStatus", error && error.message ? error.message : "Unable to save website information.", true);
@@ -685,66 +616,6 @@
           setStatus("contentStatus", t("status_marquee_removed", "Marquee image removed."), false);
         } catch (error) {
           setStatus("contentStatus", error && error.message ? error.message : "Unable to remove marquee image.", true);
-        }
-      });
-    }
-
-    function handleMarqueeFiles(files) {
-      var result = appendMarqueeFiles(files);
-      if (result.added) {
-        var message = String(pendingMarqueeFiles.length) + " image(s) queued. Save website information to upload and publish them.";
-        if (result.skipped) message += " Some files were skipped; images must be 10 MB or smaller.";
-        setStatus("contentStatus", message, false);
-      } else {
-        setStatus("contentStatus", result.skipped ? "No images added. Choose image files that are 10 MB or smaller." : t("status_marquee_files_skipped", "No new image files were added."), true);
-      }
-    }
-
-    var marqueePendingFiles = byId("marqueePendingFiles");
-    if (marqueePendingFiles) {
-      marqueePendingFiles.addEventListener("click", function (event) {
-        var button = getClosestActionButton(event.target, "data-pending-marquee-index");
-        if (!button) return;
-        var index = Number(button.getAttribute("data-pending-marquee-index"));
-        if (!Number.isInteger(index) || index < 0 || index >= pendingMarqueeFiles.length) return;
-        pendingMarqueeFiles.splice(index, 1);
-        renderPendingMarqueeFiles();
-      });
-    }
-
-    if (marqueeChooseFiles && marqueeFileInput) {
-      marqueeChooseFiles.addEventListener("click", function () {
-        marqueeFileInput.click();
-      });
-    }
-
-    if (marqueeFileInput) {
-      marqueeFileInput.addEventListener("change", function () {
-        handleMarqueeFiles(marqueeFileInput.files);
-        marqueeFileInput.value = "";
-      });
-    }
-
-    if (marqueeDropZone) {
-      ["dragenter", "dragover"].forEach(function (eventName) {
-        marqueeDropZone.addEventListener(eventName, function (event) {
-          event.preventDefault();
-          marqueeDropZone.classList.add("is-dragover");
-        });
-      });
-      ["dragleave", "drop"].forEach(function (eventName) {
-        marqueeDropZone.addEventListener(eventName, function (event) {
-          event.preventDefault();
-          marqueeDropZone.classList.remove("is-dragover");
-        });
-      });
-      marqueeDropZone.addEventListener("drop", function (event) {
-        handleMarqueeFiles(event.dataTransfer && event.dataTransfer.files);
-      });
-      marqueeDropZone.addEventListener("keydown", function (event) {
-        if ((event.key === "Enter" || event.key === " ") && marqueeFileInput) {
-          event.preventDefault();
-          marqueeFileInput.click();
         }
       });
     }
