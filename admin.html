@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=35">
+  <link rel="stylesheet" href="assets/css/style.css?v=36">
   <link rel="icon" type="image/png" href="assets/images/favicon-circle.png?v=1">
 </head>
 <body>
@@ -102,10 +102,11 @@
                 <div id="marqueeDropZone" class="marquee-drop-zone" tabindex="0" role="button">
                   <input type="file" id="marqueeFileInput" accept="image/*" multiple>
                   <strong data-i18n="admin_marquee_drop_title">Drop marquee images here</strong>
-                  <span data-i18n="admin_marquee_drop_text">or choose image files already added to assets/images</span>
+                  <span data-i18n="admin_marquee_drop_text">or choose image files from your device</span>
                   <button type="button" id="marqueeChooseFiles" class="btn btn-outline" data-i18n="admin_marquee_choose_files">Choose Files</button>
                 </div>
-                <p class="form-note" data-i18n="admin_marquee_upload_hint">Paste one image path per line, or drop/select image files from assets/images. Save after adding.</p>
+                <p class="form-note" data-i18n="admin_marquee_upload_hint">Choose or drop images from your device, then save to upload and publish them. Maximum 10 MB per image.</p>
+                <div id="marqueePendingFiles" class="marquee-pending-files" aria-live="polite"></div>
                 <div id="marqueeAdminList" class="marquee-upload-list"></div>
                 <button type="submit" class="btn btn-primary" data-i18n="btn_save_site">Save Website Information</button>
                 <p id="contentStatus" class="status-text" role="status"></p>
@@ -481,9 +482,9 @@
   </footer>
 
   <script src="assets/js/firebase-config.js?v=25"></script>
-  <script src="assets/js/data.js?v=23"></script>
-  <script src="assets/js/i18n.js?v=25"></script>
-  <script src="assets/js/admin.js?v=27"></script>
+  <script src="assets/js/data.js?v=24"></script>
+  <script src="assets/js/i18n.js?v=27"></script>
+  <script src="assets/js/admin.js?v=28"></script>
   <script src="assets/js/test-shared.js?v=41"></script>
   <script src="assets/js/test-api.js?v=41"></script>
   <script src="assets/js/test-store.js?v=32"></script>

@@ -1271,6 +1271,30 @@ textarea:focus {
   margin: 0.35rem 0 0.15rem;
 }
 
+.marquee-pending-files {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.55rem 0;
+}
+
+.marquee-pending-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--text-soft);
+  background: rgba(248, 248, 242, 0.75);
+  overflow-wrap: anywhere;
+}
+
+.marquee-pending-item .btn {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.7rem;
+}
+
 .marquee-drop-zone {
   display: grid;
   justify-items: center;

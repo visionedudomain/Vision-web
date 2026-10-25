@@ -34,6 +34,7 @@
   }
 
   var ADMIN_VIEW_KEY = "vision_admin_view_v1";
+  var pendingMarqueeFiles = [];
 
   function normalizeAdminView(value) {
     var safe = clean(value).toLowerCase();
@@ -59,11 +60,6 @@
     }).filter(Boolean);
   }
 
-  function getMarqueeAssetPath(file) {
-    var name = clean(file && file.name);
-    return name ? "assets/images/" + name : "";
-  }
-
   function isImageFile(file) {
     var type = clean(file && file.type);
     var name = clean(file && file.name);
@@ -71,32 +67,49 @@
   }
 
   function appendMarqueeFiles(files) {
-    var marqueeLinks = byId("marqueeImageLinks");
-    if (!marqueeLinks) {
-      return 0;
-    }
-    var existing = getMarqueeLines(marqueeLinks.value);
-    var seen = existing.reduce(function (result, line) {
-      result[line.toLowerCase()] = true;
+    var seen = pendingMarqueeFiles.reduce(function (result, entry) {
+      result[entry.file.name.toLowerCase() + "|" + entry.file.size + "|" + entry.file.lastModified] = true;
       return result;
     }, {});
-    var added = [];
+    var added = 0;
+    var skipped = 0;
     Array.prototype.slice.call(files || []).forEach(function (file) {
       if (!file || !isImageFile(file)) {
+        skipped += 1;
         return;
       }
-      var path = getMarqueeAssetPath(file);
-      if (path && !seen[path.toLowerCase()]) {
-        seen[path.toLowerCase()] = true;
-        added.push(path);
+      if (file.size > 10 * 1024 * 1024) {
+        skipped += 1;
+        return;
       }
+      var key = file.name.toLowerCase() + "|" + file.size + "|" + file.lastModified;
+      if (seen[key]) return;
+      seen[key] = true;
+      pendingMarqueeFiles.push({ file: file, uploaded: null });
+      added += 1;
     });
-    if (!added.length) {
-      return 0;
-    }
-    marqueeLinks.value = existing.concat(added).join("\n");
-    marqueeLinks.dispatchEvent(new Event("input", { bubbles: true }));
-    return added.length;
+    renderPendingMarqueeFiles();
+    return { added: added, skipped: skipped };
+  }
+
+  function renderPendingMarqueeFiles() {
+    var container = byId("marqueePendingFiles");
+    if (!container) return;
+    container.innerHTML = "";
+    pendingMarqueeFiles.forEach(function (entry, index) {
+      var row = document.createElement("div");
+      row.className = "marquee-pending-item";
+      var name = document.createElement("span");
+      name.textContent = entry.file.name + (entry.uploaded ? " · Ready to save" : " · Waiting to upload");
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "btn btn-outline";
+      remove.textContent = t("btn_remove", "Remove");
+      remove.setAttribute("data-pending-marquee-index", String(index));
+      row.appendChild(name);
+      row.appendChild(remove);
+      container.appendChild(row);
+    });
   }
 
   function setStatus(id, message, isError) {
@@ -611,6 +624,8 @@
     if (siteContentForm) {
       siteContentForm.addEventListener("submit", async function (event) {
         event.preventDefault();
+        var saveButton = siteContentForm.querySelector('button[type="submit"]');
+        if (saveButton) saveButton.disabled = true;
         var siteData = VisionStore.getSiteData();
         siteData.tagline = clean(siteContentForm.elements.tagline.value);
         siteData.heroTitle = clean(siteContentForm.elements.heroTitle.value);
@@ -621,13 +636,30 @@
         siteData.email = clean(siteContentForm.elements.email.value);
         siteData.instagramProfileUrl = clean(siteContentForm.elements.instagramProfileUrl.value);
         siteData.facebookProfileUrl = clean(siteContentForm.elements.facebookProfileUrl.value);
-        siteData.marqueeImages = parseMarqueeLinks(siteContentForm.elements.marqueeImageLinks.value);
-
+        var existingMarqueeImages = siteData.marqueeImages || [];
+        siteData.marqueeImages = parseMarqueeLinks(siteContentForm.elements.marqueeImageLinks.value).map(function (entry) {
+          var existing = existingMarqueeImages.filter(function (item) {
+            return item.src === entry.src;
+          })[0];
+          return existing || entry;
+        });
         try {
+          for (var imageIndex = 0; imageIndex < pendingMarqueeFiles.length; imageIndex += 1) {
+            var pendingImage = pendingMarqueeFiles[imageIndex];
+            if (!pendingImage.uploaded) {
+              setStatus("contentStatus", "Uploading marquee image " + String(imageIndex + 1) + " of " + String(pendingMarqueeFiles.length) + "...", false);
+              pendingImage.uploaded = await VisionStore.uploadMarqueeImage(pendingImage.file);
+            }
+            siteData.marqueeImages.push(pendingImage.uploaded);
+          }
           await VisionStore.saveSiteData(siteData);
+          pendingMarqueeFiles = [];
+          renderPendingMarqueeFiles();
           setStatus("contentStatus", t("status_content_saved", "Website information updated successfully."), false);
         } catch (error) {
           setStatus("contentStatus", error && error.message ? error.message : "Unable to save website information.", true);
+        } finally {
+          if (saveButton) saveButton.disabled = false;
         }
       });
     }
@@ -650,12 +682,26 @@
     }
 
     function handleMarqueeFiles(files) {
-      var count = appendMarqueeFiles(files);
-      if (count) {
-        setStatus("contentStatus", t("status_marquee_files_added", "Image paths added. Save website information to publish them."), false);
+      var result = appendMarqueeFiles(files);
+      if (result.added) {
+        var message = String(result.added) + " image(s) selected. Save website information to upload and publish them.";
+        if (result.skipped) message += " Some files were skipped; images must be 10 MB or smaller.";
+        setStatus("contentStatus", message, false);
       } else {
-        setStatus("contentStatus", t("status_marquee_files_skipped", "No new image files were added."), true);
+        setStatus("contentStatus", result.skipped ? "No images added. Choose image files that are 10 MB or smaller." : t("status_marquee_files_skipped", "No new image files were added."), true);
       }
+    }
+
+    var marqueePendingFiles = byId("marqueePendingFiles");
+    if (marqueePendingFiles) {
+      marqueePendingFiles.addEventListener("click", function (event) {
+        var button = getClosestActionButton(event.target, "data-pending-marquee-index");
+        if (!button) return;
+        var index = Number(button.getAttribute("data-pending-marquee-index"));
+        if (!Number.isInteger(index) || index < 0 || index >= pendingMarqueeFiles.length) return;
+        pendingMarqueeFiles.splice(index, 1);
+        renderPendingMarqueeFiles();
+      });
     }
 
     if (marqueeChooseFiles && marqueeFileInput) {
