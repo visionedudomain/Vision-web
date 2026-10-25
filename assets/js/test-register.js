@@ -2,10 +2,7 @@
   "use strict";
 
   var LOOKUP_STORAGE_KEY = "vision_test_registration_lookup_v1";
-  var pageState = {
-    lastLookupResult: null,
-    lastLookupQuery: null
-  };
+  var pageState = { lastLookupResult: null };
 
   function t(key, fallback) {
     return window.VisionTestI18n && typeof window.VisionTestI18n.t === "function" ? window.VisionTestI18n.t(key, fallback) : (fallback || key);
@@ -83,33 +80,12 @@
     }
   }
 
-  function saveLookupState() {
-    try {
-      window.localStorage.setItem(LOOKUP_STORAGE_KEY, JSON.stringify({
-        result: pageState.lastLookupResult,
-        query: pageState.lastLookupQuery
-      }));
-    } catch (error) {
-      console.warn(error);
-    }
-  }
-
-  function loadLookupState() {
-    try {
-      return JSON.parse(window.localStorage.getItem(LOOKUP_STORAGE_KEY) || "null");
-    } catch (error) {
-      console.warn(error);
-      return null;
-    }
-  }
-
   function renderLookupResult(result) {
     var card = byId("testRegistrationStatusResult");
     var pill = byId("registrationStatusPill");
     var loginLink = byId("registrationStatusLoginLink");
 
     pageState.lastLookupResult = result && result.found ? Object.assign({}, result) : null;
-    saveLookupState();
 
     if (!card || !pill) {
       return;
@@ -161,8 +137,6 @@
       return null;
     }
 
-    pageState.lastLookupQuery = query;
-    saveLookupState();
     setLookupStatus(t("test_registration_status_checking", "Checking registration status..."), null);
 
     try {
@@ -230,6 +204,7 @@
       });
     }
     var lookupForm = byId("testRegistrationStatusForm");
+    if (lookupForm) lookupForm.reset();
     if (!window.VisionTestApi) {
       return;
     }
@@ -256,13 +231,10 @@
       });
     }
 
-    var savedState = loadLookupState();
-    if (savedState && lookupForm) {
-      pageState.lastLookupQuery = normalizeLookupQuery(savedState.query);
-      syncLookupForm(lookupForm, pageState.lastLookupQuery);
-      if (savedState.result && savedState.result.found) {
-        renderLookupResult(savedState.result);
-      }
+    try {
+      window.localStorage.removeItem(LOOKUP_STORAGE_KEY);
+    } catch (error) {
+      console.warn("Unable to clear saved registration lookup details.", error);
     }
 
     if (!form) {
