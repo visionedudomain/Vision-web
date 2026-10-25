@@ -15,6 +15,18 @@
     return document.getElementById(id);
   }
 
+  function setRegistrationPasswordVisibility(input, button, isVisible) {
+    if (!input || !button) return;
+    input.type = isVisible ? "text" : "password";
+    button.setAttribute("aria-label", isVisible ? "Hide password" : "Show password");
+    button.setAttribute("title", isVisible ? "Hide password" : "Show password");
+    button.setAttribute("aria-pressed", isVisible ? "true" : "false");
+    var showIcon = button.querySelector(".password-eye-show");
+    var hideIcon = button.querySelector(".password-eye-hide");
+    if (showIcon) showIcon.classList.toggle("hidden", isVisible);
+    if (hideIcon) hideIcon.classList.toggle("hidden", !isVisible);
+  }
+
   function clean(value) {
     return String(value || "").trim();
   }
@@ -209,6 +221,14 @@
     }
 
     var form = byId("testRegistrationForm");
+    var registrationPassword = form && form.elements.password;
+    var toggleRegistrationPassword = byId("toggleRegistrationPassword");
+    if (registrationPassword && toggleRegistrationPassword) {
+      toggleRegistrationPassword.addEventListener("click", function () {
+        setRegistrationPasswordVisibility(registrationPassword, toggleRegistrationPassword, registrationPassword.type === "password");
+        registrationPassword.focus();
+      });
+    }
     var lookupForm = byId("testRegistrationStatusForm");
     if (!window.VisionTestApi) {
       return;
@@ -277,6 +297,7 @@
           await runLookup(lookupForm, payload, false);
         }
         form.reset();
+        setRegistrationPasswordVisibility(registrationPassword, toggleRegistrationPassword, false);
       } catch (error) {
         setRegistrationStatus(error && error.message ? error.message : t("test_registration_failed", "Unable to submit test registration right now."), "error");
       }
