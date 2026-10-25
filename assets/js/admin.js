@@ -126,6 +126,17 @@
     }
     if (passwordInput) {
       passwordInput.value = "";
+      passwordInput.type = "password";
+    }
+    var toggleButton = byId("toggleAdminPassword");
+    if (toggleButton) {
+      toggleButton.setAttribute("aria-label", "Show password");
+      toggleButton.setAttribute("title", "Show password");
+      toggleButton.setAttribute("aria-pressed", "false");
+      var showIcon = toggleButton.querySelector(".password-eye-show");
+      var hideIcon = toggleButton.querySelector(".password-eye-hide");
+      if (showIcon) showIcon.classList.remove("hidden");
+      if (hideIcon) hideIcon.classList.add("hidden");
     }
   }
 
@@ -133,12 +144,16 @@
     var loginForm = byId("loginForm");
     var passwordInput = byId("adminPassword");
     var submitButton = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
+    var toggleButton = byId("toggleAdminPassword");
     if (passwordInput) {
       passwordInput.disabled = Boolean(isPending);
     }
     if (submitButton) {
       submitButton.disabled = Boolean(isPending);
       submitButton.textContent = isPending ? "Logging in..." : t("btn_login", "Login");
+    }
+    if (toggleButton) {
+      toggleButton.disabled = Boolean(isPending);
     }
   }
 
@@ -536,6 +551,23 @@
         clearLoginForm();
       }
     });
+
+    var passwordInput = byId("adminPassword");
+    var togglePasswordButton = byId("toggleAdminPassword");
+    if (passwordInput && togglePasswordButton) {
+      togglePasswordButton.addEventListener("click", function () {
+        var shouldShow = passwordInput.type === "password";
+        passwordInput.type = shouldShow ? "text" : "password";
+        togglePasswordButton.setAttribute("aria-label", shouldShow ? "Hide password" : "Show password");
+        togglePasswordButton.setAttribute("title", shouldShow ? "Hide password" : "Show password");
+        togglePasswordButton.setAttribute("aria-pressed", shouldShow ? "true" : "false");
+        var showIcon = togglePasswordButton.querySelector(".password-eye-show");
+        var hideIcon = togglePasswordButton.querySelector(".password-eye-hide");
+        if (showIcon) showIcon.classList.toggle("hidden", shouldShow);
+        if (hideIcon) hideIcon.classList.toggle("hidden", !shouldShow);
+        passwordInput.focus();
+      });
+    }
 
     if (loginForm) {
       loginForm.addEventListener("submit", async function (event) {
