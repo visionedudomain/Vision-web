@@ -9,6 +9,22 @@
     return document.getElementById(id);
   }
 
+  function setStudentPasswordVisibility(isVisible) {
+    var input = document.querySelector("#studentLoginForm input[name='password']");
+    var button = byId("toggleStudentPassword");
+    if (!input || !button) {
+      return;
+    }
+    input.type = isVisible ? "text" : "password";
+    button.setAttribute("aria-label", isVisible ? "Hide password" : "Show password");
+    button.setAttribute("title", isVisible ? "Hide password" : "Show password");
+    button.setAttribute("aria-pressed", isVisible ? "true" : "false");
+    var showIcon = button.querySelector(".password-eye-show");
+    var hideIcon = button.querySelector(".password-eye-hide");
+    if (showIcon) showIcon.classList.toggle("hidden", isVisible);
+    if (hideIcon) hideIcon.classList.toggle("hidden", !isVisible);
+  }
+
   function clean(value) {
     return String(value || "").trim();
   }
@@ -664,6 +680,7 @@
     }
 
     var loginForm = byId("studentLoginForm");
+    var toggleStudentPassword = byId("toggleStudentPassword");
     var logoutButton = byId("studentLogoutButton");
     var startButton = byId("startTestButton");
     var resumeButton = byId("resumeTestButton");
@@ -675,6 +692,16 @@
     setSectionVisible("testResultSection", false);
     syncRewriteSectionVisibility(null);
     setStatus(t("test_portal_loading"), false);
+
+    if (toggleStudentPassword) {
+      toggleStudentPassword.addEventListener("click", function () {
+        var passwordInput = loginForm && loginForm.elements.password;
+        if (passwordInput) {
+          setStudentPasswordVisibility(passwordInput.type === "password");
+          passwordInput.focus();
+        }
+      });
+    }
 
     if (loginForm) {
       if (window.VisionTestApi.isDemoMode && window.VisionTestApi.isDemoMode()) {
@@ -691,6 +718,7 @@
         try {
           var sessionPayload = await window.VisionTestApi.studentLogin(clean(loginForm.elements.loginName.value), clean(loginForm.elements.password.value));
           loginForm.reset();
+          setStudentPasswordVisibility(false);
           setStudentWelcome(sessionPayload && sessionPayload.student);
           renderStudentTestWindows(sessionPayload && sessionPayload.student);
           setSessionVisible(true);

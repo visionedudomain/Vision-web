@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=29">
+  <link rel="stylesheet" href="assets/css/style.css?v=36">
   <link rel="icon" type="image/png" href="assets/images/favicon-circle.png?v=1">
 </head>
 <body>
@@ -44,7 +44,13 @@
         <p class="form-note" data-test-i18n="test_portal_login_hint">Use the login name and password shared by Vision Academy.</p>
         <form id="studentLoginForm" class="single-line-form portal-login-form">
           <input type="text" name="loginName" required data-test-i18n-placeholder="test_placeholder_login_name" placeholder="Enter login name">
-          <input type="password" name="password" required data-test-i18n-placeholder="test_placeholder_password" placeholder="Enter password">
+          <span class="password-input-wrap">
+            <input type="password" name="password" required data-test-i18n-placeholder="test_placeholder_password" placeholder="Enter password" autocomplete="current-password">
+            <button type="button" id="toggleStudentPassword" class="password-toggle" aria-label="Show password" aria-pressed="false" title="Show password">
+              <svg class="password-eye-show" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="password-eye-hide hidden" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a15.4 15.4 0 0 1-3.1 3.9M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7c1.5 0 2.8-.4 4-1"/></svg>
+            </button>
+          </span>
           <button type="submit" class="btn btn-primary" data-test-i18n="test_btn_login">Login</button>
         </form>
       </section>
@@ -162,7 +168,7 @@
   <script src="assets/js/test-api.js?v=41"></script>
   <script src="assets/js/test-store.js?v=31"></script>
   <script src="assets/js/test-demo-api.js?v=1"></script>
-  <script src="assets/js/test-portal.js?v=31"></script>
+  <script src="assets/js/test-portal.js?v=32"></script>
 </body>
 </html>
 

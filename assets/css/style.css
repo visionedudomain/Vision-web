@@ -1139,6 +1139,10 @@ textarea:focus {
   max-width: 260px;
 }
 
+.portal-login-form .password-input-wrap input {
+  max-width: none;
+}
+
 .portal-summary-card,
 .runner-question-card,
 .question-nav-wrap {
@@ -1592,6 +1596,11 @@ th {
   }
 
   .portal-login-form input {
+    max-width: none;
+  }
+
+  .portal-login-form .password-input-wrap {
+    width: 100%;
     max-width: none;
   }
 
