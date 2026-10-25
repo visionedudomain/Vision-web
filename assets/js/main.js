@@ -64,6 +64,29 @@
   var marqueeGalleryReturnFocus = null;
   var marqueeTouchStart = null;
 
+  function setupWelcomeScreen() {
+    var screen = document.getElementById("welcomeScreen");
+    var enterButton = document.getElementById("welcomeEnter");
+    if (!screen || !enterButton || !document.documentElement.classList.contains("welcome-pending")) return;
+
+    screen.setAttribute("aria-hidden", "false");
+    enterButton.focus();
+    enterButton.addEventListener("click", function () {
+      try {
+        window.sessionStorage.setItem("vision_welcome_seen_v1", "1");
+      } catch (error) {
+        // The welcome screen still dismisses if storage is unavailable.
+      }
+      document.documentElement.classList.remove("welcome-pending");
+      document.documentElement.classList.add("welcome-dismissing");
+      screen.setAttribute("aria-hidden", "true");
+      window.setTimeout(function () {
+        document.documentElement.classList.remove("welcome-dismissing");
+        document.documentElement.classList.add("welcome-seen");
+      }, 620);
+    });
+  }
+
   function normalizeText(value) {
     return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
   }
@@ -521,6 +544,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", async function () {
+    setupWelcomeScreen();
     await VisionStore.ready();
 
     renderPage(VisionStore.getSiteData(), VisionStore.getNews());
