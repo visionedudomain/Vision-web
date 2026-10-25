@@ -54,6 +54,15 @@
   };
 
   var marqueeTimerId = null;
+  var marqueeSlides = [];
+  var marqueeImages = [];
+  var marqueeActiveIndex = 0;
+  var marqueeHoverOpenTimerId = null;
+  var marqueeGalleryIsOpen = false;
+  var marqueeGalleryOpenedByHover = false;
+  var marqueeHoverReopenBlocked = false;
+  var marqueeGalleryReturnFocus = null;
+  var marqueeTouchStart = null;
 
   function normalizeText(value) {
     return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -199,23 +208,167 @@
     }
   }
 
+  function showMarqueeSlide(index) {
+    if (!marqueeSlides.length) return;
+    var nextIndex = (index + marqueeSlides.length) % marqueeSlides.length;
+    var currentSlide = marqueeSlides[marqueeActiveIndex];
+    var nextSlide = marqueeSlides[nextIndex];
+    if (!nextSlide || nextIndex === marqueeActiveIndex) return;
+
+    if (currentSlide) {
+      currentSlide.classList.remove("is-active");
+      currentSlide.classList.add("is-exit");
+    }
+    nextSlide.classList.remove("is-exit");
+    nextSlide.classList.add("is-enter");
+    void nextSlide.offsetWidth;
+    nextSlide.classList.add("is-active");
+    nextSlide.classList.remove("is-enter");
+    window.setTimeout(function () {
+      if (currentSlide) currentSlide.classList.remove("is-exit");
+    }, 720);
+    marqueeActiveIndex = nextIndex;
+  }
+
+  function updateMarqueeGallery() {
+    var image = document.getElementById("marqueeGalleryImage");
+    var caption = document.getElementById("marqueeGalleryCaption");
+    var count = document.getElementById("marqueeGalleryCount");
+    if (!image || !marqueeImages.length) return;
+    var item = marqueeImages[marqueeActiveIndex];
+    image.src = item.src;
+    image.alt = t("academy_name_brand", "Vision Education Academy") + " " + (item.name || "");
+    if (caption) caption.textContent = item.name || t("academy_name_brand", "Vision Education Academy");
+    if (count) count.textContent = (marqueeActiveIndex + 1) + " / " + marqueeImages.length;
+  }
+
+  function openMarqueeGallery(openedByHover) {
+    var gallery = document.getElementById("marqueeGallery");
+    if (!gallery || !marqueeImages.length || marqueeGalleryIsOpen) return;
+    marqueeGalleryIsOpen = true;
+    marqueeGalleryOpenedByHover = Boolean(openedByHover);
+    marqueeGalleryReturnFocus = document.activeElement;
+    clearMarqueeTimer();
+    updateMarqueeGallery();
+    gallery.classList.add("is-open");
+    gallery.setAttribute("aria-hidden", "false");
+    document.body.classList.add("marquee-gallery-open");
+    if (!openedByHover) {
+      var closeButton = document.getElementById("marqueeGalleryClose");
+      if (closeButton) closeButton.focus();
+    }
+  }
+
+  function closeMarqueeGallery() {
+    var gallery = document.getElementById("marqueeGallery");
+    if (!gallery || !marqueeGalleryIsOpen) return;
+    var wasHover = marqueeGalleryOpenedByHover;
+    marqueeGalleryIsOpen = false;
+    marqueeGalleryOpenedByHover = false;
+    gallery.classList.remove("is-open");
+    gallery.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("marquee-gallery-open");
+    if (wasHover) marqueeHoverReopenBlocked = true;
+    if (marqueeGalleryReturnFocus && typeof marqueeGalleryReturnFocus.focus === "function" && !wasHover) {
+      marqueeGalleryReturnFocus.focus();
+    }
+    if (marqueeSlides.length > 1) {
+      marqueeTimerId = window.setInterval(function () {
+        showMarqueeSlide(marqueeActiveIndex + 1);
+      }, 3400);
+    }
+  }
+
+  function moveMarqueeGallery(direction) {
+    if (!marqueeImages.length) return;
+    showMarqueeSlide(marqueeActiveIndex + direction);
+    updateMarqueeGallery();
+  }
+
+  function bindMarqueeGallery() {
+    var marquee = document.querySelector(".hero-marquee");
+    var openButton = document.getElementById("heroMarqueeOpen");
+    var gallery = document.getElementById("marqueeGallery");
+    if (!marquee || !gallery || marquee.dataset.galleryBound) return;
+    marquee.dataset.galleryBound = "true";
+
+    if (openButton) openButton.addEventListener("click", function (event) {
+      event.stopPropagation();
+      openMarqueeGallery(false);
+    });
+    marquee.addEventListener("click", function () {
+      openMarqueeGallery(false);
+    });
+
+    var closeTargets = gallery.querySelectorAll("[data-marquee-gallery-close]");
+    Array.prototype.forEach.call(closeTargets, function (target) {
+      target.addEventListener("click", closeMarqueeGallery);
+    });
+    var previous = document.getElementById("marqueeGalleryPrevious");
+    var next = document.getElementById("marqueeGalleryNext");
+    if (previous) previous.addEventListener("click", function () { moveMarqueeGallery(-1); });
+    if (next) next.addEventListener("click", function () { moveMarqueeGallery(1); });
+
+    var finePointer = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)");
+    if (finePointer && finePointer.matches) {
+      marquee.addEventListener("mouseenter", function () {
+        if (marqueeHoverReopenBlocked) return;
+        window.clearTimeout(marqueeHoverOpenTimerId);
+        marqueeHoverOpenTimerId = window.setTimeout(function () { openMarqueeGallery(true); }, 350);
+      });
+      marquee.addEventListener("mouseleave", function () { window.clearTimeout(marqueeHoverOpenTimerId); });
+      document.addEventListener("mousemove", function (event) {
+        if (!marqueeHoverReopenBlocked) return;
+        var rect = marquee.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+          marqueeHoverReopenBlocked = false;
+        }
+      });
+    }
+
+    var dialog = gallery.querySelector(".marquee-gallery-dialog");
+    if (dialog) {
+      dialog.addEventListener("pointerdown", function (event) {
+        if (event.pointerType === "touch") marqueeTouchStart = { x: event.clientX, y: event.clientY };
+      });
+      dialog.addEventListener("pointerup", function (event) {
+        if (!marqueeTouchStart || event.pointerType !== "touch") return;
+        var dx = event.clientX - marqueeTouchStart.x;
+        var dy = event.clientY - marqueeTouchStart.y;
+        marqueeTouchStart = null;
+        if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.2) moveMarqueeGallery(dx < 0 ? 1 : -1);
+      });
+      dialog.addEventListener("pointercancel", function () { marqueeTouchStart = null; });
+    }
+    document.addEventListener("keydown", function (event) {
+      if (!marqueeGalleryIsOpen) return;
+      if (event.key === "Escape") closeMarqueeGallery();
+      if (event.key === "ArrowRight") { event.preventDefault(); moveMarqueeGallery(1); }
+      if (event.key === "ArrowLeft") { event.preventDefault(); moveMarqueeGallery(-1); }
+    });
+  }
+
   function renderHeroMarquee(imageItems) {
     var track = document.getElementById("heroMarqueeTrack");
     if (!track) {
       return;
     }
 
+    if (marqueeGalleryIsOpen) closeMarqueeGallery();
     clearMarqueeTimer();
     track.innerHTML = "";
 
-    var images = getMarqueeImages(imageItems);
-    if (!images.length) {
+    marqueeImages = getMarqueeImages(imageItems);
+    marqueeSlides = [];
+    marqueeActiveIndex = 0;
+    bindMarqueeGallery();
+    if (!marqueeImages.length) {
       return;
     }
 
     var altPrefix = t("academy_name_brand", "Vision Education Academy") + " ";
 
-    images.forEach(function (item, index) {
+    marqueeImages.forEach(function (item, index) {
       var figure = document.createElement("figure");
       figure.className = "hero-marquee-item";
       if (index === 0) {
@@ -231,35 +384,13 @@
       track.appendChild(figure);
     });
 
-    if (images.length <= 1) {
+    marqueeSlides = Array.prototype.slice.call(track.querySelectorAll(".hero-marquee-item"));
+    if (marqueeImages.length <= 1) {
       return;
     }
 
-    var slides = Array.prototype.slice.call(track.querySelectorAll(".hero-marquee-item"));
-    var activeIndex = 0;
-
     marqueeTimerId = window.setInterval(function () {
-      var currentSlide = slides[activeIndex];
-      var nextIndex = (activeIndex + 1) % slides.length;
-      var nextSlide = slides[nextIndex];
-      if (!currentSlide || !nextSlide) {
-        return;
-      }
-
-      currentSlide.classList.remove("is-active");
-      currentSlide.classList.add("is-exit");
-
-      nextSlide.classList.remove("is-exit");
-      nextSlide.classList.add("is-enter");
-      void nextSlide.offsetWidth;
-      nextSlide.classList.add("is-active");
-      nextSlide.classList.remove("is-enter");
-
-      window.setTimeout(function () {
-        currentSlide.classList.remove("is-exit");
-      }, 720);
-
-      activeIndex = nextIndex;
+      showMarqueeSlide(marqueeActiveIndex + 1);
     }, 3400);
   }
 

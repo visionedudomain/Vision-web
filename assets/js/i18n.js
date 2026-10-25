@@ -18,6 +18,10 @@
       home_apply_now: "Apply Now",
       home_latest_news: "Latest News",
       home_announcement_title: "Current Announcement",
+      home_marquee_gallery_open: "View photos",
+      home_marquee_gallery_close: "Close image gallery",
+      home_marquee_gallery_previous: "Previous image",
+      home_marquee_gallery_next: "Next image",
       home_programs: "Programs",
       home_news_updates: "News & Updates",
       home_instagram_posts: "Instagram Posts",
@@ -162,6 +166,10 @@
       home_apply_now: "இப்போது விண்ணப்பிக்கவும்",
       home_latest_news: "சமீபத்திய செய்திகள்",
       home_announcement_title: "தற்போதைய அறிவிப்பு",
+      home_marquee_gallery_open: "படங்களைப் பார்க்கவும்",
+      home_marquee_gallery_close: "படத் தொகுப்பை மூடவும்",
+      home_marquee_gallery_previous: "முந்தைய படம்",
+      home_marquee_gallery_next: "அடுத்த படம்",
       home_programs: "பாடத்திட்டங்கள்",
       home_news_updates: "செய்திகள் மற்றும் புதுப்பிப்புகள்",
       home_instagram_posts: "Instagram பதிவுகள்",
@@ -311,6 +319,11 @@
     document.querySelectorAll("[data-i18n-placeholder]").forEach(function (element) {
       var key = element.getAttribute("data-i18n-placeholder");
       element.setAttribute("placeholder", t(key));
+    });
+
+    document.querySelectorAll("[data-i18n-aria-label]").forEach(function (element) {
+      var key = element.getAttribute("data-i18n-aria-label");
+      element.setAttribute("aria-label", t(key));
     });
 
     document.querySelectorAll("[data-lang-toggle]").forEach(function (button) {
