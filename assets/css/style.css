@@ -775,9 +775,11 @@ a {
 
 @media (max-width: 620px) {
   .welcome-screen::before {
-    background-size: 100% auto;
-    background-position: center center;
-    opacity: 0.14;
+    /* Fill the tall phone viewport with the complete banner instead of
+       leaving it as a narrow strip across the middle of the welcome screen. */
+    background-size: 100% 100%;
+    background-position: center;
+    opacity: 0.11;
   }
 
   .welcome-content {
@@ -1813,6 +1815,10 @@ textarea:focus {
 
 @media (max-width: 620px) {
   body {
+    background-attachment: fixed;
+  }
+
+  body {
     background-size: 100% 100%, 100% 100vh;
     background-position: center, center top;
   }
@@ -2069,7 +2075,11 @@ th {
   }
 
   .hero #heroTitle {
-    font-size: clamp(2.45rem, 9vw, 3.4rem);
+    max-width: none;
+    margin-bottom: 0.75rem;
+    color: var(--heading);
+    font-size: clamp(2rem, 8vw, 2.8rem);
+    line-height: 1.08;
   }
 
   .hero-grid > div:first-child {
@@ -2078,8 +2088,16 @@ th {
     padding: 1rem;
     border: 1px solid rgba(148, 122, 151, 0.2);
     border-radius: 18px;
-    background: rgba(255, 255, 253, 0.9);
-    box-shadow: 0 12px 28px rgba(75, 57, 78, 0.08);
+    background: rgba(255, 255, 253, 0.97);
+    box-shadow: 0 12px 28px rgba(75, 57, 78, 0.12);
+  }
+
+  .hero-identity {
+    overflow-wrap: anywhere;
+  }
+
+  .hero p {
+    color: #5a4d5e;
   }
 
   .welcome-content {
