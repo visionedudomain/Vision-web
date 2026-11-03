@@ -775,9 +775,9 @@ a {
 
 @media (max-width: 620px) {
   .welcome-screen::before {
-    background-size: 140% auto;
-    background-position: 50% 64%;
-    opacity: 0.1;
+    background-size: 100% auto;
+    background-position: center center;
+    opacity: 0.14;
   }
 
   .welcome-content {
@@ -2070,6 +2070,16 @@ th {
 
   .hero #heroTitle {
     font-size: clamp(2.45rem, 9vw, 3.4rem);
+  }
+
+  .hero-grid > div:first-child {
+    position: relative;
+    z-index: 1;
+    padding: 1rem;
+    border: 1px solid rgba(148, 122, 151, 0.2);
+    border-radius: 18px;
+    background: rgba(255, 255, 253, 0.9);
+    box-shadow: 0 12px 28px rgba(75, 57, 78, 0.08);
   }
 
   .welcome-content {
