@@ -8,7 +8,7 @@
   var NEWS_COLLECTION = "news";
   var APPLICATIONS_COLLECTION = "applications";
   var DEFAULT_SITE_DATA = {
-    profileVersion: 12,
+    profileVersion: 13,
     academyName: "VISION EDUCATION ACADEMY",
     tagline: "Coaching for Entrance Success",
     heroTitle: "Build your future with guided preparation.",
@@ -33,7 +33,8 @@
       { id: "marquee_default_010", name: "WhatsApp Image 2026-08-11 at 7.42.42 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.42 AM.jpeg" },
       { id: "marquee_default_011", name: "WhatsApp Image 2026-08-11 at 7.42.44 AM.jpeg", src: "assets/images/WhatsApp Image 2026-08-11 at 7.42.44 AM.jpeg" },
       { id: "marquee_added_20261016", name: "WhatsApp Image 2026-10-16 at 3.29.56 PM.jpeg", src: "assets/images/WhatsApp Image 2026-10-16 at 3.29.56 PM.jpeg" },
-      { id: "marquee_added_20261023", name: "WhatsApp Image 2026-10-23 at 10.40.56 PM.jpeg", src: "assets/images/WhatsApp Image 2026-10-23 at 10.40.56 PM.jpeg" }
+      { id: "marquee_added_20261023", name: "WhatsApp Image 2026-10-23 at 10.40.56 PM.jpeg", src: "assets/images/WhatsApp Image 2026-10-23 at 10.40.56 PM.jpeg" },
+      { id: "marquee_added_20261105", name: "WhatsApp Image 2026-11-05 at 11.18.55 PM.jpeg", src: "assets/images/WhatsApp Image 2026-11-05 at 11.18.55 PM.jpeg" }
     ],
     instagramPosts: [
       { id: "ig_default_001", url: "https://www.instagram.com/p/DVfjAxWgcoH/" }
@@ -247,8 +248,22 @@
   function sanitizeSiteData(siteData) {
     var safe = siteData && typeof siteData === "object" ? siteData : {};
     var defaults = DEFAULT_SITE_DATA;
+    var profileVersion = safe.profileVersion == null ? 0 : (Number(safe.profileVersion) || 0);
+    var marqueeImages = Array.isArray(safe.marqueeImages) ? sanitizeMarqueeItems(safe.marqueeImages) : deepCopy(defaults.marqueeImages);
+    if (profileVersion < 13) {
+      var knownSources = marqueeImages.reduce(function (result, item) {
+        result[item.src] = true;
+        return result;
+      }, {});
+      defaults.marqueeImages.slice(-3).forEach(function (item) {
+        if (!knownSources[item.src]) {
+          marqueeImages.push(item);
+          knownSources[item.src] = true;
+        }
+      });
+    }
     return {
-      profileVersion: safe.profileVersion == null ? 0 : (Number(safe.profileVersion) || 0),
+      profileVersion: profileVersion,
       academyName: clean(safe.academyName) || defaults.academyName,
       tagline: clean(safe.tagline) || defaults.tagline,
       heroTitle: clean(safe.heroTitle) || defaults.heroTitle,
@@ -260,7 +275,7 @@
       instagramProfileUrl: clean(safe.instagramProfileUrl) || defaults.instagramProfileUrl,
       facebookProfileUrl: clean(safe.facebookProfileUrl) || defaults.facebookProfileUrl,
       mapUrl: clean(safe.mapUrl) || defaults.mapUrl,
-      marqueeImages: Array.isArray(safe.marqueeImages) ? sanitizeMarqueeItems(safe.marqueeImages) : deepCopy(defaults.marqueeImages),
+      marqueeImages: marqueeImages,
       instagramPosts: Array.isArray(safe.instagramPosts) ? sanitizeInstagramPosts(safe.instagramPosts) : deepCopy(defaults.instagramPosts)
     };
   }
@@ -728,18 +743,18 @@
       return true;
     }
     var siteData = getSiteData();
-    if (Number(siteData.profileVersion || 0) < 12) {
+    if (Number(siteData.profileVersion || 0) < 13) {
       var knownSources = siteData.marqueeImages.reduce(function (result, item) {
         result[item.src] = true;
         return result;
       }, {});
-      DEFAULT_SITE_DATA.marqueeImages.slice(-2).forEach(function (item) {
+      DEFAULT_SITE_DATA.marqueeImages.slice(-3).forEach(function (item) {
         if (!knownSources[item.src]) {
           siteData.marqueeImages.push(item);
           knownSources[item.src] = true;
         }
       });
-      siteData.profileVersion = 12;
+      siteData.profileVersion = 13;
       await saveSiteData(siteData);
       return true;
     }

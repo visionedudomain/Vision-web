@@ -5,10 +5,10 @@
   --surface-muted: rgba(245, 239, 247, 0.96);
   --panel-gradient: linear-gradient(155deg, rgba(255, 255, 253, 0.98) 0%, rgba(242, 237, 245, 0.98) 100%);
   --panel-border: rgba(148, 122, 151, 0.2);
-  --text: #3c3540;
-  --heading: #392e3e;
-  --text-soft: #6d6172;
-  --muted: #887c8b;
+  --text: #29242d;
+  --heading: #211a28;
+  --text-soft: #433a47;
+  --muted: #504653;
   --primary: #c46880;
   --primary-dark: #a84f6a;
   --secondary: #c8b3d6;
@@ -44,7 +44,7 @@ body {
   min-height: 100vh;
   position: relative;
   background:
-    linear-gradient(180deg, rgba(253, 249, 250, 0.12), rgba(244, 239, 247, 0.16)),
+    linear-gradient(180deg, rgba(253, 249, 250, 0.58), rgba(244, 239, 247, 0.64)),
     url("../images/pages-background.png") center center / cover fixed no-repeat;
 }
 
@@ -775,9 +775,8 @@ a {
 
 @media (max-width: 620px) {
   .welcome-screen::before {
-    /* Fill the tall phone viewport with the complete banner instead of
-       leaving it as a narrow strip across the middle of the welcome screen. */
-    background-size: 100% 100%;
+    /* Preserve the landscape artwork's proportions on tall phone screens. */
+    background-size: auto 100%;
     background-position: center;
     opacity: 0.11;
   }
@@ -1816,9 +1815,9 @@ textarea:focus {
 @media (max-width: 620px) {
   body {
     background-attachment: fixed;
-  }
-
-  body {
+    background-image:
+      linear-gradient(180deg, rgba(253, 249, 250, 0.66), rgba(244, 239, 247, 0.72)),
+      url("../images/pages-background.png");
     background-size: 100% 100%, 100% 100vh;
     background-position: center, center top;
   }
@@ -2085,11 +2084,11 @@ th {
   .hero-grid > div:first-child {
     position: relative;
     z-index: 1;
-    padding: 1rem;
-    border: 1px solid rgba(148, 122, 151, 0.2);
-    border-radius: 18px;
-    background: rgba(255, 255, 253, 0.97);
-    box-shadow: 0 12px 28px rgba(75, 57, 78, 0.12);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .hero-identity {
@@ -2203,4 +2202,74 @@ th {
     background-size: min(78vw, 520px);
     opacity: 0.06;
   }
+}
+
+/* Shared flat, background-led presentation across every page. */
+.hero-card,
+.highlights-block,
+.highlights-list li,
+.card,
+.news-item,
+.contact-box,
+.instagram-card,
+.form-card,
+.summary-chip,
+.result-status-card,
+.result-suggestion-item,
+.result-test-summary-card,
+.test-import-summary,
+.question-editor-card,
+.table-wrap {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.section-alt {
+  border-color: transparent;
+  background: transparent;
+}
+
+.site-footer {
+  background: linear-gradient(180deg, transparent, rgba(244, 239, 247, 0.38));
+}
+
+.hero-identity,
+.hero p,
+.card p,
+.news-item p,
+.highlights-subtitle,
+.identity-subtitle,
+.identity-location,
+.muted,
+.text-soft,
+.empty-text,
+.table-subtext,
+.mini-label {
+  color: var(--text-soft);
+}
+
+.highlights-list li {
+  border-radius: 0;
+  padding-right: 0.25rem;
+  padding-left: 2rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table-wrap table {
+  background: transparent;
+}
+
+.card:hover,
+.news-item:hover,
+.instagram-card:hover,
+.hero-card:hover,
+.contact-box:hover {
+  transform: none;
+  border-color: transparent;
+  box-shadow: none;
 }
